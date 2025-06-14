@@ -1,4 +1,14 @@
 const TILE_SIZE: i32 = 16;
+const GRAVITY: f32 = 0.6;
+
+const PLAYER_MOVE_SPEED_MAX: f32 = 2.0;
+const PLAYER_ACCELERATION: f32 = 1.0;
+const PLAYER_DECELERATION: f32 = 0.5;
+const PLAYER_MIN_JUMP_FORCE: f32 = 3.0;
+const PLAYER_MAX_JUMP_FORCE: f32 = 5.5;
+//add these two
+const PLAYER_JUMP_POWER_DUR: i32 = 6;
+const PLAYER_COYOTE_TIMER_DUR: i32 = 3;
 
 #[derive(BorshDeserialize, BorshSerialize, Debug, Clone, PartialEq)]
 struct Player {
@@ -10,6 +20,8 @@ struct Player {
     is_falling: bool,
     is_facing_left: bool,
     is_landed: bool,
+    coyote_timer: i32,
+    is_powering_jump: bool,
 }
 
 impl Player {
@@ -21,18 +33,130 @@ impl Player {
             speed_y: 0.0,
             max_gravity: 15.0,
             is_falling: false,
-            is_facing_left: false,
+            is_facing_left: true,
             is_landed: false,
+            coyote_timer: 0,
+            is_powering_jump: false,
+        }
+    }
+    fn handle_input(&mut self) {
+        let gp = gamepad(0);
+        if (gp.up.just_pressed() || gp.start.just_pressed())
+            && (self.is_landed || self.coyote_timer > 0)
+            && self.speed_y >= 0.
+        {
+            if !self.is_powering_jump {
+                self.speed_y = -PLAYER_MIN_JUMP_FORCE;
+                self.is_powering_jump = true;
+            }
+        }
+
+        if self.is_powering_jump && (gp.up.pressed() || gp.start.pressed()) && self.speed_y < 0. {
+            self.speed_y -=
+                (PLAYER_MAX_JUMP_FORCE - PLAYER_MIN_JUMP_FORCE) / (PLAYER_JUMP_POWER_DUR as f32);
+            if self.speed_y <= -PLAYER_MAX_JUMP_FORCE {
+                self.is_powering_jump = false;
+            }
+        } else {
+            self.is_powering_jump = false;
+        }
+
+        if gp.left.pressed() {
+            self.speed_x -= PLAYER_ACCELERATION;
+            self.is_facing_left = true;
+        } else if gp.right.pressed() {
+            self.speed_x += PLAYER_ACCELERATION;
+            self.is_facing_left = false;
+        } else {
+            if self.speed_x > 0. {
+                self.speed_x -= PLAYER_DECELERATION
+            } else if self.speed_x < 0. {
+                self.speed_x += PLAYER_DECELERATION
+            }
+        }
+
+        self.speed_x = self
+            .speed_x
+            .clamp(-PLAYER_MOVE_SPEED_MAX, PLAYER_MOVE_SPEED_MAX);
+        if !self.is_powering_jump {
+            self.speed_y += GRAVITY;
+        }
+        self.speed_y = self.speed_y.clamp(-PLAYER_MAX_JUMP_FORCE, self.max_gravity);
+
+        if self.coyote_timer > 0 {
+            self.coyote_timer -= 1;
         }
     }
 
+    fn check_collision_tilemap(&mut self, tiles: &[Tile]) {
+        // Check collision down
+        if self.speed_y > 0.0 {
+            if check_collision(self.x, self.y + self.speed_y, Direction::Down, tiles) {
+                self.speed_y = 0.0;
+                self.is_landed = true;
+            } else {
+                if self.is_landed {
+                    self.is_landed = false;
+                    self.coyote_timer = PLAYER_COYOTE_TIMER_DUR;
+                }
+            }
+        }
+
+        // Check collision up
+        if self.speed_y < 0.0 {
+            while self.speed_y < 0.0 {
+                if check_collision(self.x, self.y + self.speed_y, Direction::Up, tiles) {
+                    self.speed_y += 1.0;
+                } else {
+                    break;
+                }
+            }
+        }
+
+        // Check collision right
+        if self.speed_x > 0.0 {
+            while self.speed_x > 0.0 {
+                if check_collision(self.x + self.speed_x, self.y, Direction::Right, tiles) {
+                    self.speed_x -= 1.0;
+                } else {
+                    break;
+                }
+            }
+        }
+
+        // Check collision left
+        if self.speed_x < 0.0 {
+            while self.speed_x < 0.0 {
+                if check_collision(self.x + self.speed_x, self.y, Direction::Left, tiles) {
+                    self.speed_x += 1.0;
+                } else {
+                    break;
+                }
+            }
+        }
+    }
+
+    fn update_position(&mut self) {
+        self.x += self.speed_x;
+        self.y += self.speed_y;
+    }
+
     fn draw(&self) {
-        sprite!(
-            "kiwi_idle",
-            x = self.x as i32,
-            y = self.y as i32,
-            flip_x = self.is_facing_left,
-        )
+        if self.is_landed && self.speed_x != 0. {
+            sprite!(
+                "kiwi_walking",
+                x = self.x as i32,
+                y = self.y as i32,
+                flip_x = self.is_facing_left,
+            );
+        } else {
+            sprite!(
+                "kiwi_idle",
+                x = self.x as i32,
+                y = self.y as i32,
+                flip_x = self.is_facing_left,
+            );
+        }
     }
 }
 
@@ -45,6 +169,15 @@ struct Tile {
 impl Tile {
     fn new(grid_x: usize, grid_y: usize) -> Self {
         Self { grid_x, grid_y }
+    }
+    
+    fn contains(&self, point_x: f32, point_y: f32) -> bool {
+        let tile_x = self.grid_x as f32 * TILE_SIZE as f32;
+        let tile_y = self.grid_y as f32 * TILE_SIZE as f32;
+        point_x >= tile_x
+            && point_x < tile_x + TILE_SIZE as f32
+            && point_y >= tile_y
+            && point_y < tile_y + TILE_SIZE as f32
     }
 
     fn draw(&self) {
@@ -61,7 +194,21 @@ turbo::init!(
         tiles: Vec<Tile>,
     } = {
         let mut tiles = Vec::new();
-        tiles.push(Tile::new(7, 8));
+
+        //Bottom layer of tiles
+        for x in 0..24 {
+            tiles.push(Tile::new(x, 12));
+        }
+        //Side walls
+        for y in 9..=11 {
+            tiles.push(Tile::new(0, y));
+            tiles.push(Tile::new(23, y));
+        }
+        //Some tiles to jump on
+        tiles.push(Tile::new(5, 10));
+        tiles.push(Tile::new(11, 9));
+        tiles.push(Tile::new(17, 11));
+
         GameState {
             player: Player::new(110., 112.),
             tiles,
@@ -69,12 +216,76 @@ turbo::init!(
     }
 );
 
-turbo::go!(
+turbo::go!({
     let mut state = GameState::load();
     clear(0xadd8e6ff);
-    for t in &mut state.tiles{
+    for t in &mut state.tiles {
         t.draw();
     }
+    state.player.handle_input();
+    state.player.check_collision_tilemap(&state.tiles);
+    state.player.update_position();
+    center_camera(state.player.x, state.player.y);
     state.player.draw();
     state.save();
-);
+});
+
+enum Direction {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
+//check collision betwen the player and the tilemap
+fn check_collision(
+    player_x: f32,
+    player_y: f32,
+    direction: Direction,
+    tiles: &[Tile],
+) -> bool {
+    //Width and height of sprite art
+    let w: f32 = 12.;
+    let h: f32 = 12.;
+    //Padding between top and left for where sprite art begins
+    let pad_x: f32 = 2.;
+    let pad_y: f32 = 3.;
+    let (check_x1, check_y1, check_x2, check_y2) = match direction {
+        Direction::Up => (
+            player_x + pad_x,
+            player_y + pad_y,
+            player_x + pad_x + w,
+            player_y + pad_y,
+        ),
+        Direction::Down => (
+            player_x + pad_x,
+            player_y + pad_y + h,
+            player_x + pad_x + w,
+            player_y + pad_y + h,
+        ),
+        Direction::Left => (
+            player_x + pad_x - 1.,
+            player_y + pad_y,
+            player_x - 1.,
+            player_y + pad_y + h,
+        ),
+        Direction::Right => (
+            player_x + pad_x + w + 1.,
+            player_y + pad_y,
+            player_x + pad_x + w + 1.,
+            player_y + pad_y + h,
+        ),
+    };
+
+    for tile in tiles {
+        if tile.contains(check_x1, check_y1) || tile.contains(check_x2, check_y2) {
+            return true
+        }
+    }
+    false
+}
+
+fn center_camera(x: f32, y: f32) {
+    // Subtract half the width of the canvas, then add half the size of the player to center the camera
+    camera::set_xy(x + 8., y + 8.);
+}
