@@ -6,3 +6,6 @@ authors = ["Enver Podgorcevic"]
 [canvas]
 width = 256
 height = 144
+
+[shader]
+default-surface-shader = "my-awesome-shader"

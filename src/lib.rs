@@ -48,7 +48,7 @@ impl Player {
             if !self.is_powering_jump {
                 self.speed_y = -PLAYER_MIN_JUMP_FORCE;
                 self.is_powering_jump = true;
-                audio::play("jump-sfx");
+                audio::play("jump-sfx-nothing");
             }
         }
 
@@ -223,8 +223,8 @@ turbo::go!({
     for t in &mut state.tiles {
         t.draw();
     }
-    if !audio::is_playing("bg-music") {
-        audio::play("bg-music");
+    if !audio::is_playing("bg-music-nothing") {
+        audio::play("bg-music-nothing");
     }
     state.player.handle_input();
     state.player.check_collision_tilemap(&state.tiles);
