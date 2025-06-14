@@ -4,5 +4,5 @@ description = "An awesome game made in Turbo!"
 authors = ["Enver Podgorcevic"]
 
 [canvas]
-width = 384
-height = 216
+width = 256
+height = 144
