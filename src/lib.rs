@@ -1,3 +1,5 @@
+use std::ops;
+
 const GRAVITY: f32 = 0.6;
 
 const PLAYER_MOVE_SPEED_MAX: f32 = 2.0;
@@ -10,11 +12,46 @@ const PLAYER_JUMP_POWER_DUR: i32 = 6;
 const PLAYER_COYOTE_TIMER_DUR: i32 = 3;
 
 #[derive(BorshDeserialize, BorshSerialize, Debug, Clone, PartialEq)]
-struct Player {
+struct Vector2 {
     x: f32,
     y: f32,
-    speed_x: f32,
-    speed_y: f32,
+}
+
+impl Vector2 {
+    fn new(x: f32, y: f32) -> Self {
+        Self {
+            x,
+            y
+        }
+    }
+    
+    fn zero() -> Self {
+        Self {
+            x: 0.0,
+            y: 0.0,
+        }
+    }
+}
+
+impl ops::Add for &Vector2 {
+    type Output = Vector2;
+
+    fn add(self, rhs: &Vector2) -> Self::Output {
+        Vector2::new(self.x + rhs.x, self.y + rhs.y)
+    }
+}
+
+impl ops::AddAssign<&Vector2> for Vector2 {
+    fn add_assign(&mut self, rhs: &Vector2) {
+        self.x += rhs.x;
+        self.y += rhs.y;
+    }
+}
+
+#[derive(BorshDeserialize, BorshSerialize, Debug, Clone, PartialEq)]
+struct Player {
+    position: Vector2,
+    speed: Vector2,
     max_gravity: f32,
     is_falling: bool,
     is_facing_left: bool,
@@ -26,10 +63,8 @@ struct Player {
 impl Player {
     fn new(x: f32, y: f32) -> Self {
         Self {
-            x,
-            y,
-            speed_x: 0.0,
-            speed_y: 0.0,
+            position: Vector2::new(x, y),
+            speed: Vector2::zero(),
             max_gravity: 15.0,
             is_falling: false,
             is_facing_left: true,
@@ -42,19 +77,19 @@ impl Player {
         let gp = gamepad(0);
         if (gp.up.just_pressed() || gp.start.just_pressed())
             && (self.is_landed || self.coyote_timer > 0)
-            && self.speed_y >= 0.
+            && self.speed.y >= 0.
         {
             if !self.is_powering_jump {
-                self.speed_y = -PLAYER_MIN_JUMP_FORCE;
+                self.speed.y = -PLAYER_MIN_JUMP_FORCE;
                 self.is_powering_jump = true;
                 audio::play("jump-sfx-nothing");
             }
         }
 
-        if self.is_powering_jump && (gp.up.pressed() || gp.start.pressed()) && self.speed_y < 0. {
-            self.speed_y -=
+        if self.is_powering_jump && (gp.up.pressed() || gp.start.pressed()) && self.speed.y < 0. {
+            self.speed.y -=
                 (PLAYER_MAX_JUMP_FORCE - PLAYER_MIN_JUMP_FORCE) / (PLAYER_JUMP_POWER_DUR as f32);
-            if self.speed_y <= -PLAYER_MAX_JUMP_FORCE {
+            if self.speed.y <= -PLAYER_MAX_JUMP_FORCE {
                 self.is_powering_jump = false;
             }
         } else {
@@ -62,26 +97,26 @@ impl Player {
         }
 
         if gp.left.pressed() {
-            self.speed_x -= PLAYER_ACCELERATION;
+            self.speed.x -= PLAYER_ACCELERATION;
             self.is_facing_left = true;
         } else if gp.right.pressed() {
-            self.speed_x += PLAYER_ACCELERATION;
+            self.speed.x += PLAYER_ACCELERATION;
             self.is_facing_left = false;
         } else {
-            if self.speed_x > 0. {
-                self.speed_x -= PLAYER_DECELERATION
-            } else if self.speed_x < 0. {
-                self.speed_x += PLAYER_DECELERATION
+            if self.speed.x > 0. {
+                self.speed.x -= PLAYER_DECELERATION
+            } else if self.speed.x < 0. {
+                self.speed.x += PLAYER_DECELERATION
             }
         }
 
-        self.speed_x = self
-            .speed_x
+        self.speed.x = self
+            .speed.x
             .clamp(-PLAYER_MOVE_SPEED_MAX, PLAYER_MOVE_SPEED_MAX);
         if !self.is_powering_jump {
-            self.speed_y += GRAVITY;
+            self.speed.y += GRAVITY;
         }
-        self.speed_y = self.speed_y.clamp(-PLAYER_MAX_JUMP_FORCE, self.max_gravity);
+        self.speed.y = self.speed.y.clamp(-PLAYER_MAX_JUMP_FORCE, self.max_gravity);
 
         if self.coyote_timer > 0 {
             self.coyote_timer -= 1;
@@ -90,9 +125,9 @@ impl Player {
 
     fn check_collision_tilemap(&mut self, tiles: &[Tile]) {
         // Check collision down
-        if self.speed_y > 0.0 {
-            if check_collision(self.x, self.y + self.speed_y, Direction::Down, tiles) {
-                self.speed_y = 0.0;
+        if self.speed.y > 0.0 {
+            if check_collision(&self.position + &Vector2::new(0.0, self.speed.y), Direction::Down, tiles) {
+                self.speed.y = 0.0;
                 self.is_landed = true;
             } else {
                 if self.is_landed {
@@ -103,10 +138,10 @@ impl Player {
         }
 
         // Check collision up
-        if self.speed_y < 0.0 {
-            while self.speed_y < 0.0 {
-                if check_collision(self.x, self.y + self.speed_y, Direction::Up, tiles) {
-                    self.speed_y += 1.0;
+        if self.speed.y < 0.0 {
+            while self.speed.y < 0.0 {
+                if check_collision(&self.position + &Vector2::new(0.0, self.speed.y), Direction::Up, tiles) {
+                    self.speed.y += 1.0;
                 } else {
                     break;
                 }
@@ -114,10 +149,10 @@ impl Player {
         }
 
         // Check collision right
-        if self.speed_x > 0.0 {
-            while self.speed_x > 0.0 {
-                if check_collision(self.x + self.speed_x, self.y, Direction::Right, tiles) {
-                    self.speed_x -= 1.0;
+        if self.speed.x > 0.0 {
+            while self.speed.x > 0.0 {
+                if check_collision(&self.position + &Vector2::new(self.speed.x, 0.0), Direction::Right, tiles) {
+                    self.speed.x -= 1.0;
                 } else {
                     break;
                 }
@@ -125,10 +160,10 @@ impl Player {
         }
 
         // Check collision left
-        if self.speed_x < 0.0 {
-            while self.speed_x < 0.0 {
-                if check_collision(self.x + self.speed_x, self.y, Direction::Left, tiles) {
-                    self.speed_x += 1.0;
+        if self.speed.x < 0.0 {
+            while self.speed.x < 0.0 {
+                if check_collision( &self.position + &Vector2::new(self.speed.x, 0.0), Direction::Left, tiles) {
+                    self.speed.x += 1.0;
                 } else {
                     break;
                 }
@@ -137,23 +172,22 @@ impl Player {
     }
 
     fn update_position(&mut self) {
-        self.x += self.speed_x;
-        self.y += self.speed_y;
+        self.position += &self.speed;
     }
 
     fn draw(&self) {
-        if self.is_landed && self.speed_x != 0. {
+        if self.is_landed && self.speed.x != 0. {
             sprite!(
                 "kiwi_walking",
-                x = self.x as i32,
-                y = self.y as i32,
+                x = self.position.x as i32,
+                y = self.position.y as i32,
                 flip_x = self.is_facing_left,
             );
         } else {
             sprite!(
                 "kiwi_idle",
-                x = self.x as i32,
-                y = self.y as i32,
+                x = self.position.x as i32,
+                y = self.position.y as i32,
                 flip_x = self.is_facing_left,
             );
         }
@@ -251,7 +285,7 @@ turbo::go!({
     state.player.handle_input();
     state.player.check_collision_tilemap(&state.tiles);
     state.player.update_position();
-    center_camera(state.player.x, state.player.y);
+    center_camera(state.player.position.x, state.player.position.y);
     state.player.draw();
     state.save();
 });
@@ -265,8 +299,7 @@ enum Direction {
 
 //check collision betwen the player and the tilemap
 fn check_collision(
-    player_x: f32,
-    player_y: f32,
+    position: Vector2,
     direction: Direction,
     tiles: &[Tile],
 ) -> bool {
@@ -278,28 +311,28 @@ fn check_collision(
     let pad_y: f32 = 3.;
     let (check_x1, check_y1, check_x2, check_y2) = match direction {
         Direction::Up => (
-            player_x + pad_x,
-            player_y + pad_y,
-            player_x + pad_x + w,
-            player_y + pad_y,
+            position.x + pad_x,
+            position.y + pad_y,
+            position.x + pad_x + w,
+            position.y + pad_y,
         ),
         Direction::Down => (
-            player_x + pad_x,
-            player_y + pad_y + h,
-            player_x + pad_x + w,
-            player_y + pad_y + h,
+            position.x + pad_x,
+            position.y + pad_y + h,
+            position.x + pad_x + w,
+            position.y + pad_y + h,
         ),
         Direction::Left => (
-            player_x + pad_x - 1.,
-            player_y + pad_y,
-            player_x - 1.,
-            player_y + pad_y + h,
+            position.x + pad_x - 1.,
+            position.y + pad_y,
+            position.x - 1.,
+            position.y + pad_y + h,
         ),
         Direction::Right => (
-            player_x + pad_x + w + 1.,
-            player_y + pad_y,
-            player_x + pad_x + w + 1.,
-            player_y + pad_y + h,
+            position.x + pad_x + w + 1.,
+            position.y + pad_y,
+            position.x + pad_x + w + 1.,
+            position.y + pad_y + h,
         ),
     };
 
