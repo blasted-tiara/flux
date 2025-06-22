@@ -1,4 +1,3 @@
-const TILE_SIZE: i32 = 16;
 const GRAVITY: f32 = 0.6;
 
 const PLAYER_MOVE_SPEED_MAX: f32 = 2.0;
@@ -165,54 +164,77 @@ impl Player {
 struct Tile {
     grid_x: usize,
     grid_y: usize,
+    tile_size_x: u32,
+    tile_size_y: u32,
 }
 
 impl Tile {
-    fn new(grid_x: usize, grid_y: usize) -> Self {
-        Self { grid_x, grid_y }
+    fn new(grid_x: usize, grid_y: usize, tile_size_x: u32, tile_size_y: u32) -> Self {
+        Self { grid_x, grid_y, tile_size_x, tile_size_y }
     }
     
     fn contains(&self, point_x: f32, point_y: f32) -> bool {
-        let tile_x = self.grid_x as f32 * TILE_SIZE as f32;
-        let tile_y = self.grid_y as f32 * TILE_SIZE as f32;
+        let tile_x = self.grid_x as f32 * self.tile_size_x as f32;
+        let tile_y = self.grid_y as f32 * self.tile_size_y as f32;
         point_x >= tile_x
-            && point_x < tile_x + TILE_SIZE as f32
+            && point_x < tile_x + self.tile_size_x as f32
             && point_y >= tile_y
-            && point_y < tile_y + TILE_SIZE as f32
+            && point_y < tile_y + self.tile_size_y as f32
     }
 
     fn draw(&self) {
-        let x = self.grid_x as i32 * TILE_SIZE;
-        let y = self.grid_y as i32 * TILE_SIZE;
+        let x = self.grid_x as i32 * self.tile_size_x as i32;
+        let y = self.grid_y as i32 * self.tile_size_y as i32;
 
-        sprite!("tile", x = x, y = y);
+        sprite!("dirt", x = x, y = y);
     }
 }
+
+struct TileMap {
+    tiles: Vec<Tile>,
+}
+
+impl TileMap {
+    fn new(data: &[&[u8]], tile_size_x: u32, tile_size_y: u32) -> Self {
+        let mut tiles: Vec<Tile> = Vec::new();
+        for j in 0..data.len() {
+            for i in 0..data[j].len() {
+                if data[j][i] == 1 {
+                    tiles.push(Tile::new(i, j, tile_size_x, tile_size_y));
+                }
+            }
+        }
+        TileMap {
+            tiles
+        }
+    }
+}
+
 
 turbo::init!(
     struct GameState {
         player: Player,
         tiles: Vec<Tile>,
     } = {
-        let mut tiles = Vec::new();
-
-        //Bottom layer of tiles
-        for x in 0..24 {
-            tiles.push(Tile::new(x, 12));
-        }
-        //Side walls
-        for y in 9..=11 {
-            tiles.push(Tile::new(0, y));
-            tiles.push(Tile::new(23, y));
-        }
-        //Some tiles to jump on
-        tiles.push(Tile::new(5, 10));
-        tiles.push(Tile::new(11, 9));
-        tiles.push(Tile::new(17, 11));
+        let tile_map = TileMap::new(
+            &[
+                &[1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0],
+                &[1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0],
+                &[1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0],
+                &[1, 1, 1, 1,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0],
+                &[1, 1, 1, 1,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0],
+                &[1, 1, 1, 1,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0],
+                &[1, 1, 1, 1,  1, 1, 0, 0,  1, 1, 0, 0,  0, 0, 0, 0],
+                &[1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 0, 0,  0, 0, 0, 0],
+                &[1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1],
+            ],
+            16,
+            16,
+        );
 
         GameState {
-            player: Player::new(110., 112.),
-            tiles,
+            player: Player::new(110., 80.),
+            tiles: tile_map.tiles,
         }
     }
 );
