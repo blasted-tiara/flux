@@ -1,32 +1,33 @@
 use core::fmt;
 use std::ops;
+use std::f32::consts::PI;
 
-const GRAVITY: f32 = 0.6;
+const GRAVITY: f32 = 1.6;
 
-const PLAYER_MOVE_SPEED_MAX: f32 = 2.0;
-const PLAYER_ACCELERATION: f32 = 1.0;
-const PLAYER_DECELERATION: f32 = 0.5;
-const PLAYER_MIN_JUMP_FORCE: f32 = 3.0;
-const PLAYER_MAX_JUMP_FORCE: f32 = 5.5;
+const PLAYER_MOVE_SPEED_MAX: f32 = 8.0;
+const PLAYER_ACCELERATION: f32 = 4.0;
+const PLAYER_DECELERATION: f32 = 2.0;
+const PLAYER_MIN_JUMP_FORCE: f32 = 13.0;
+const PLAYER_MAX_JUMP_FORCE: f32 = 22.0;
 //add these two
 const PLAYER_JUMP_POWER_DUR: i32 = 6;
 const PLAYER_COYOTE_TIMER_DUR: i32 = 3;
 
 #[derive(BorshDeserialize, BorshSerialize, Debug, Clone, PartialEq)]
-struct Vector2 {
+pub struct Vector2 {
     x: f32,
     y: f32,
 }
 
 impl Vector2 {
-    fn new(x: f32, y: f32) -> Self {
+    pub fn new(x: f32, y: f32) -> Self {
         Self {
             x,
             y
         }
     }
     
-    fn zero() -> Self {
+    pub fn zero() -> Self {
         Self {
             x: 0.0,
             y: 0.0,
@@ -58,46 +59,129 @@ impl ops::AddAssign<&Vector2> for Vector2 {
 #[derive(BorshDeserialize, BorshSerialize, Debug, Clone, PartialEq)]
 pub struct RigidBody {
     position: Vector2,
+    rotation: f32,
     velocity: Vector2,
     max_gravity: f32,
     is_falling: bool,
+    is_landed: bool,
+    coyote_timer: i32,
 }
 
 impl RigidBody {
-    fn update_position(&mut self) {
+    pub fn update_position(&mut self) {
         prelude::println!("Position: {}", self.position);
         prelude::println!("Velocity: {}", self.velocity);
         self.position += &self.velocity;
     }
     
-    fn add_velocity(&mut self, velocity: Vector2) {
+    pub fn apply_gravity(&mut self) {
+        self.add_velocity(Vector2::new(0.0, GRAVITY));
+    }
+    
+    pub fn add_velocity(&mut self, velocity: Vector2) {
         self.velocity += &velocity;
     }
     
-    fn clamp_velocity_x(&mut self, max_velocity: Vector2) {
+    pub fn clamp_velocity_x(&mut self, max_velocity: Vector2) {
         self.velocity.x = self.velocity.x.clamp(max_velocity.x, max_velocity.y);
     }
     
-    fn clamp_velocity_y(&mut self, max_velocity: Vector2) {
+    pub fn clamp_velocity_y(&mut self, max_velocity: Vector2) {
         self.velocity.y = self.velocity.y.clamp(max_velocity.x, max_velocity.y);
     }
     
-    fn stop_y(&mut self) {
+    pub fn stop_y(&mut self) {
         self.velocity.y = 0.0;
     }
+    
+    pub fn rotation_degrees(&self) -> i32 {
+        (self.rotation * 360.0 / (2.0 * PI)) as i32
+    }
+
+    fn check_collision_tilemap(&mut self, tiles: &[Tile]) {
+        // Check collision down
+        if self.velocity.y > 0.0 {
+            if check_collision(&self.position + &Vector2::new(0.0, self.velocity.y), Direction::Down, tiles) {
+                self.stop_y();
+                self.is_landed = true;
+            } else {
+                if self.is_landed {
+                    self.is_landed = false;
+                    self.coyote_timer = PLAYER_COYOTE_TIMER_DUR;
+                }
+            }
+        }
+
+        // Check collision up
+        if self.velocity.y < 0.0 {
+            while self.velocity.y < 0.0 {
+                if check_collision(&self.position + &Vector2::new(0.0, self.velocity.y), Direction::Up, tiles) {
+                    self.add_velocity(Vector2::new(0.0, 1.0));
+                } else {
+                    break;
+                }
+            }
+        }
+
+        // Check collision right
+        if self.velocity.x > 0.0 {
+            while self.velocity.x > 0.0 {
+                if check_collision(&self.position + &Vector2::new(self.velocity.x, 0.0), Direction::Right, tiles) {
+                    self.add_velocity(Vector2::new(-1.0, 0.0));
+                } else {
+                    break;
+                }
+            }
+        }
+
+        // Check collision left
+        if self.velocity.x < 0.0 {
+            while self.velocity.x < 0.0 {
+                if check_collision( &self.position + &Vector2::new(self.velocity.x, 0.0), Direction::Left, tiles) {
+                    self.add_velocity(Vector2::new(1.0, 0.0));
+                } else {
+                    break;
+                }
+            }
+        }
+    }
+
 }
 
 #[derive(BorshDeserialize, BorshSerialize, Debug, Clone, PartialEq)]
 struct Harvester {
+    rigid_body: RigidBody,
+}
+
+impl Harvester {
+    fn new(x: f32, y: f32, rotation: f32) -> Self {
+        Self {
+            rigid_body: RigidBody {
+                position: Vector2::new(x, y),
+                velocity: Vector2::zero(),
+                rotation: rotation,
+                max_gravity: 15.0,
+                is_falling: false,
+                is_landed: false,
+                coyote_timer: 0,
+            }
+        }        
+    }
     
+    fn draw(&self) {
+        sprite!(
+            "harvester",
+            x = self.rigid_body.position.x,
+            y = self.rigid_body.position.y,
+            rotation = self.rigid_body.rotation_degrees(),
+        );
+    }
 }
 
 #[derive(BorshDeserialize, BorshSerialize, Debug, Clone, PartialEq)]
 struct Player {
     rigid_body: RigidBody,
     is_facing_left: bool,
-    coyote_timer: i32,
-    is_landed: bool,
     is_powering_jump: bool,
 }
 
@@ -107,19 +191,20 @@ impl Player {
             rigid_body: RigidBody {
                 position: Vector2::new(x, y),
                 velocity: Vector2::zero(),
+                rotation: 0.0,
                 max_gravity: 15.0,
                 is_falling: false,
+                is_landed: false,
+                coyote_timer: 0,
             },
             is_facing_left: true,
-            is_landed: false,
-            coyote_timer: 0,
             is_powering_jump: false,
         }
     }
     fn handle_input(&mut self) {
         let gp = gamepad(0);
         if (gp.up.just_pressed() || gp.start.just_pressed())
-            && (self.is_landed || self.coyote_timer > 0)
+            && (self.rigid_body.is_landed || self.rigid_body.coyote_timer > 0)
             && self.rigid_body.velocity.y >= 0.
         {
             if !self.is_powering_jump {
@@ -154,65 +239,17 @@ impl Player {
 
         self.rigid_body.clamp_velocity_x(Vector2::new(-PLAYER_MOVE_SPEED_MAX, PLAYER_MOVE_SPEED_MAX));
         if !self.is_powering_jump {
-            self.rigid_body.add_velocity(Vector2::new(0.0, GRAVITY));
+            self.rigid_body.apply_gravity();
         }
         self.rigid_body.clamp_velocity_y(Vector2::new(-PLAYER_MAX_JUMP_FORCE, self.rigid_body.max_gravity));
 
-        if self.coyote_timer > 0 {
-            self.coyote_timer -= 1;
-        }
-    }
-
-    fn check_collision_tilemap(&mut self, tiles: &[Tile]) {
-        // Check collision down
-        if self.rigid_body.velocity.y > 0.0 {
-            if check_collision(&self.rigid_body.position + &Vector2::new(0.0, self.rigid_body.velocity.y), Direction::Down, tiles) {
-                self.rigid_body.stop_y();
-                self.is_landed = true;
-            } else {
-                if self.is_landed {
-                    self.is_landed = false;
-                    self.coyote_timer = PLAYER_COYOTE_TIMER_DUR;
-                }
-            }
-        }
-
-        // Check collision up
-        if self.rigid_body.velocity.y < 0.0 {
-            while self.rigid_body.velocity.y < 0.0 {
-                if check_collision(&self.rigid_body.position + &Vector2::new(0.0, self.rigid_body.velocity.y), Direction::Up, tiles) {
-                    self.rigid_body.add_velocity(Vector2::new(0.0, 1.0));
-                } else {
-                    break;
-                }
-            }
-        }
-
-        // Check collision right
-        if self.rigid_body.velocity.x > 0.0 {
-            while self.rigid_body.velocity.x > 0.0 {
-                if check_collision(&self.rigid_body.position + &Vector2::new(self.rigid_body.velocity.x, 0.0), Direction::Right, tiles) {
-                    self.rigid_body.add_velocity(Vector2::new(-1.0, 0.0));
-                } else {
-                    break;
-                }
-            }
-        }
-
-        // Check collision left
-        if self.rigid_body.velocity.x < 0.0 {
-            while self.rigid_body.velocity.x < 0.0 {
-                if check_collision( &self.rigid_body.position + &Vector2::new(self.rigid_body.velocity.x, 0.0), Direction::Left, tiles) {
-                    self.rigid_body.add_velocity(Vector2::new(1.0, 0.0));
-                } else {
-                    break;
-                }
-            }
+        if self.rigid_body.coyote_timer > 0 {
+            self.rigid_body.coyote_timer -= 1;
         }
     }
 
     fn draw(&self) {
-        if self.is_landed && self.rigid_body.velocity.x != 0. {
+        if self.rigid_body.is_landed && self.rigid_body.velocity.x != 0. {
             sprite!(
                 "kiwi_walking",
                 x = self.rigid_body.position.x as i32,
@@ -284,6 +321,7 @@ impl TileMap {
 turbo::init!(
     struct GameState {
         player: Player,
+        harvesters: Vec<Harvester>,
         tiles: Vec<Tile>,
     } = {
         let tile_map = TileMap::new(
@@ -298,13 +336,19 @@ turbo::init!(
                 &[1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 0, 0,  0, 0, 0, 0],
                 &[1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1],
             ],
-            16,
-            16,
+            64,
+            64,
         );
-
+        
+        let mut harvesters = vec![];
+        harvesters.push(Harvester::new(200., 60., 0.0));
+        harvesters.push(Harvester::new(300., 40., PI / 2.));
+        harvesters.push(Harvester::new(450., 20., PI));
+        
         GameState {
-            player: Player::new(110., 80.),
+            player: Player::new(390., 80.),
             tiles: tile_map.tiles,
+            harvesters
         }
     }
 );
@@ -319,10 +363,17 @@ turbo::go!({
         audio::play("bg-music-nothing");
     }
     state.player.handle_input();
-    state.player.check_collision_tilemap(&state.tiles);
+    state.harvesters.iter_mut().for_each(|h| h.rigid_body.apply_gravity());
+
+    state.player.rigid_body.check_collision_tilemap(&state.tiles);
+    state.harvesters.iter_mut().for_each(|h| h.rigid_body.check_collision_tilemap(&state.tiles));
+
     state.player.rigid_body.update_position();
+    state.harvesters.iter_mut().for_each(|h| h.rigid_body.update_position());
+
     center_camera(&state.player.rigid_body.position);
     state.player.draw();
+    state.harvesters.iter().for_each(|h| h.draw());
     state.save();
 });
 
@@ -333,6 +384,7 @@ enum Direction {
     Right,
 }
 
+
 //check collision betwen the player and the tilemap
 fn check_collision(
     position: Vector2,
@@ -340,8 +392,8 @@ fn check_collision(
     tiles: &[Tile],
 ) -> bool {
     //Width and height of sprite art
-    let w: f32 = 12.;
-    let h: f32 = 12.;
+    let w: f32 = 48.;
+    let h: f32 = 55.;
     //Padding between top and left for where sprite art begins
     let pad_x: f32 = 2.;
     let pad_y: f32 = 3.;
