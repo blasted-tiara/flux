@@ -4,8 +4,8 @@ description = "An awesome game made in Turbo!"
 authors = ["Enver Podgorcevic"]
 
 [canvas]
-width = 256
-height = 144
+width = 1024
+height = 576
 
 [shader]
 default-surface-shader = "my-awesome-shader"
