@@ -103,8 +103,6 @@ impl Player {
             self.coyote_timer -= 1;
         }
         
-        log!("Coyote timer: {}", self.coyote_timer);
-
         if self.jump_buffer_timer > 0 {
             self.jump_buffer_timer -= 1;
         }
