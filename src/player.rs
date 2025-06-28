@@ -5,14 +5,15 @@ pub struct Player {
     pub rigid_body: RigidBody,
     is_facing_left: bool,
     coyote_timer: i32,
+    jump_buffer_timer: i32,
     gravity: f32,
-    fall_gravity: f32,
     max_gravity: f32,
     move_speed_max: f32,
     acceleration: f32,
     deceleration: f32,
     jump_force: f32,
     coyote_timer_duration: u32,
+    jump_buffer_timer_duration: i32,
     movement_status: MovementStatus,
 }
 
@@ -24,16 +25,17 @@ impl Player {
                 velocity: Vector2::zero(),
                 rotation: 0.0,
             },
-            move_speed_max: 8.0,
+            move_speed_max: 12.0,
             coyote_timer: 0,
-            gravity: 6.5,
-            fall_gravity: 15.,
-            max_gravity: 15.,
+            jump_buffer_timer: 0,
+            gravity: 5.,
+            max_gravity: 25.,
             is_facing_left: true,
-            acceleration: 4.,
-            deceleration: 2.,
-            jump_force: 60.,
+            acceleration: 6.,
+            deceleration: 1.0,
+            jump_force: 50.,
             coyote_timer_duration: 3,
+            jump_buffer_timer_duration: 8,
             movement_status: MovementStatus::IsFalling,
         }
     }
@@ -42,15 +44,15 @@ impl Player {
         let gp = gamepad(0);
         
         let jump_just_pressed = gp.up.just_pressed() || gp.start.just_pressed();
+        let jump_pressed = gp.up.pressed() || gp.start.pressed();
         
         match self.movement_status {
             MovementStatus::IsLanded => {
-                if jump_just_pressed {
+                if jump_just_pressed || self.jump_buffer_timer > 0 {
                     self.rigid_body.velocity.y = -self.jump_force;
                     self.movement_status = MovementStatus::InJump;
                     audio::play("jump-sfx-nothing");
                 }
-
             },
             MovementStatus::InJump => {
                 if self.rigid_body.velocity.y > 0. {
@@ -62,7 +64,9 @@ impl Player {
                     self.rigid_body.velocity.y = -self.jump_force;
                     self.movement_status = MovementStatus::InJump;
                     audio::play("jump-sfx-nothing");
-                }                
+                } else if jump_just_pressed {
+                    self.jump_buffer_timer = self.jump_buffer_timer_duration;
+                }
             }
         }
 
@@ -82,17 +86,23 @@ impl Player {
 
         self.rigid_body.clamp_velocity_x(Vector2::new(-self.move_speed_max, self.move_speed_max));
         // Apply custom gravity
-        let current_gravity = if self.movement_status == MovementStatus::IsFalling 
+        let current_gravity = if self.movement_status == MovementStatus::IsFalling && !jump_pressed
             {
-                Vector2::new(0., self.fall_gravity)
+                Vector2::new(0., self.gravity * 6.)
+            } else if self.rigid_body.velocity.y < 25. {
+                Vector2::new(0., self.gravity / 1.5)
             } else { 
                 Vector2::new(0.,  self.gravity )
             };
         self.rigid_body.add_velocity(current_gravity);
         self.rigid_body.clamp_velocity_y(Vector2::new(-self.jump_force, self.max_gravity));
 
-        if self.coyote_timer> 0 {
+        if self.coyote_timer > 0 {
             self.coyote_timer -= 1;
+        }
+        
+        if self.jump_buffer_timer > 0 {
+            self.jump_buffer_timer -= 1;
         }
     }
     
