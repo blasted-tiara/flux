@@ -36,10 +36,3 @@ impl TileMap {
         Vector2::new(position.x.clamp(min_x, max_x), position.y.clamp(min_y, max_y))
     } 
 }
-
-struct Box {
-    left: f32,
-    right: f32,
-    top: f32,
-    bottom: f32,
-}

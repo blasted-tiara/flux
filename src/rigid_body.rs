@@ -41,18 +41,20 @@ impl RigidBody {
     pub fn check_collision_tilemap(&mut self, tiles: &[Tile]) {
         // Check collision down
         if self.velocity.y > 0.0 {
-            if check_collision(&self.position + &Vector2::new(0.0, self.velocity.y), Direction::Down, tiles) {
-                self.stop_y();
+            match check_collision(&self.position + &Vector2::new(0.0, self.velocity.y), Direction::Down, tiles) {
+                Some(_) => {
+                    self.stop_y();
+                }
+                None => {}
             }
         }
 
         // Check collision up
         if self.velocity.y < 0.0 {
             while self.velocity.y < 0.0 {
-                if check_collision(&self.position + &Vector2::new(0.0, self.velocity.y), Direction::Up, tiles) {
-                    self.add_velocity(Vector2::new(0.0, 1.0));
-                } else {
-                    break;
+                match check_collision(&self.position + &Vector2::new(0.0, self.velocity.y), Direction::Up, tiles) {
+                    Some(_) => { self.add_velocity(Vector2::new(0.0, 1.0)); }
+                    None => { break; }
                 }
             }
         }
@@ -60,10 +62,9 @@ impl RigidBody {
         // Check collision right
         if self.velocity.x > 0.0 {
             while self.velocity.x > 0.0 {
-                if check_collision(&self.position + &Vector2::new(self.velocity.x, 0.0), Direction::Right, tiles) {
-                    self.add_velocity(Vector2::new(-1.0, 0.0));
-                } else {
-                    break;
+                match check_collision(&self.position + &Vector2::new(self.velocity.x, 0.0), Direction::Right, tiles) {
+                    Some(_) => { self.add_velocity(Vector2::new(-1.0, 0.0)); }
+                    None => { break; }
                 }
             }
         }
@@ -71,10 +72,9 @@ impl RigidBody {
         // Check collision left
         if self.velocity.x < 0.0 {
             while self.velocity.x < 0.0 {
-                if check_collision( &self.position + &Vector2::new(self.velocity.x, 0.0), Direction::Left, tiles) {
-                    self.add_velocity(Vector2::new(1.0, 0.0));
-                } else {
-                    break;
+                match check_collision( &self.position + &Vector2::new(self.velocity.x, 0.0), Direction::Left, tiles) {
+                    Some(_) => { self.add_velocity(Vector2::new(1.0, 0.0)); }
+                    None => { break; }
                 }
             }
         }
@@ -86,7 +86,7 @@ pub fn check_collision(
     position: Vector2,
     direction: Direction,
     tiles: &[Tile],
-) -> bool {
+) -> Option<&Tile> {
     //Width and height of sprite art
     let w: f32 = 48.;
     let h: f32 = 55.;
@@ -122,10 +122,10 @@ pub fn check_collision(
 
     for tile in tiles {
         if tile.contains(check_x1, check_y1) || tile.contains(check_x2, check_y2) {
-            return true
+            return Some(&tile)
         }
     }
-    false
+    None
 }
 
 pub enum Direction {
