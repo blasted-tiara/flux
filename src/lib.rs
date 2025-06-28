@@ -25,20 +25,12 @@ use std::f32::consts::PI;
 
 const GRAVITY: f32 = 1.6;
 
-const PLAYER_MOVE_SPEED_MAX: f32 = 8.0;
-const PLAYER_ACCELERATION: f32 = 4.0;
-const PLAYER_DECELERATION: f32 = 2.0;
-const PLAYER_MIN_JUMP_FORCE: f32 = 13.0;
-const PLAYER_MAX_JUMP_FORCE: f32 = 22.0;
-//add these two
-const PLAYER_JUMP_POWER_DUR: i32 = 6;
-const PLAYER_COYOTE_TIMER_DUR: i32 = 3;
-
 turbo::init!(
     struct GameState {
         player: Player,
         harvesters: Vec<Harvester>,
         tiles: Vec<Tile>,
+        last_time: u64,
     } = {
         let tile_map = TileMap::new(
             &[
@@ -64,7 +56,8 @@ turbo::init!(
         GameState {
             player: Player::new(390., 80.),
             tiles: tile_map.tiles,
-            harvesters
+            harvesters,
+            last_time: 0,
         }
     }
 );
@@ -81,7 +74,7 @@ turbo::go!({
     state.player.handle_input();
     state.harvesters.iter_mut().for_each(|h| h.rigid_body.apply_gravity());
 
-    state.player.rigid_body.check_collision_tilemap(&state.tiles);
+    state.player.check_collision_tilemap(&state.tiles);
     state.harvesters.iter_mut().for_each(|h| h.rigid_body.check_collision_tilemap(&state.tiles));
 
     state.player.rigid_body.update_position();

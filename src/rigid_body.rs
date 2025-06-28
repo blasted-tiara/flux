@@ -1,16 +1,10 @@
 use crate::*;
 
-use tile::*;
-
 #[derive(BorshDeserialize, BorshSerialize, Debug, Clone, PartialEq)]
 pub struct RigidBody {
     pub position: Vector2,
     pub rotation: f32,
     pub velocity: Vector2,
-    pub max_gravity: f32,
-    pub is_falling: bool,
-    pub is_landed: bool,
-    pub coyote_timer: i32,
 }
 
 impl RigidBody {
@@ -47,12 +41,6 @@ impl RigidBody {
         if self.velocity.y > 0.0 {
             if check_collision(&self.position + &Vector2::new(0.0, self.velocity.y), Direction::Down, tiles) {
                 self.stop_y();
-                self.is_landed = true;
-            } else {
-                if self.is_landed {
-                    self.is_landed = false;
-                    self.coyote_timer = PLAYER_COYOTE_TIMER_DUR;
-                }
             }
         }
 
@@ -89,11 +77,10 @@ impl RigidBody {
             }
         }
     }
-
 }
 
 //check collision betwen the player and the tilemap
-fn check_collision(
+pub fn check_collision(
     position: Vector2,
     direction: Direction,
     tiles: &[Tile],
@@ -139,7 +126,7 @@ fn check_collision(
     false
 }
 
-enum Direction {
+pub enum Direction {
     Up,
     Down,
     Left,

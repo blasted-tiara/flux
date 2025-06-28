@@ -12,10 +12,6 @@ impl Harvester {
                 position: Vector2::new(x, y),
                 velocity: Vector2::zero(),
                 rotation: rotation,
-                max_gravity: 15.0,
-                is_falling: false,
-                is_landed: false,
-                coyote_timer: 0,
             }
         }        
     }
