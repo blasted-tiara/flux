@@ -1,5 +1,7 @@
 use crate::*;
 
+const GRAVITY: f32 = 1.6;
+
 #[derive(BorshDeserialize, BorshSerialize, Debug, Clone, PartialEq)]
 pub struct RigidBody {
     pub position: Vector2,

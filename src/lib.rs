@@ -23,13 +23,14 @@ use core::fmt;
 use std::ops;
 use std::f32::consts::PI;
 
-const GRAVITY: f32 = 1.6;
+const SCREEN_WIDTH: i32 = 1024;
+const SCREEN_HEIGHT: i32 = 576;
 
 turbo::init!(
     struct GameState {
         player: Player,
         harvesters: Vec<Harvester>,
-        tiles: Vec<Tile>,
+        tile_map: TileMap,
         last_time: u64,
     } = {
         let tile_map = TileMap::new(
@@ -55,7 +56,7 @@ turbo::init!(
         
         GameState {
             player: Player::new(390., 80.),
-            tiles: tile_map.tiles,
+            tile_map,
             harvesters,
             last_time: 0,
         }
@@ -64,8 +65,9 @@ turbo::init!(
 
 turbo::go!({
     let mut state = GameState::load();
+    
     clear(0xadd8e6ff);
-    for t in &mut state.tiles {
+    for t in &mut state.tile_map.tiles {
         t.draw();
     }
     if !audio::is_playing("bg-music-nothing") {
@@ -74,13 +76,13 @@ turbo::go!({
     state.player.handle_input();
     state.harvesters.iter_mut().for_each(|h| h.rigid_body.apply_gravity());
 
-    state.player.check_collision_tilemap(&state.tiles);
-    state.harvesters.iter_mut().for_each(|h| h.rigid_body.check_collision_tilemap(&state.tiles));
+    state.player.check_collision_tilemap(&state.tile_map.tiles);
+    state.harvesters.iter_mut().for_each(|h| h.rigid_body.check_collision_tilemap(&state.tile_map.tiles));
 
     state.player.rigid_body.update_position();
     state.harvesters.iter_mut().for_each(|h| h.rigid_body.update_position());
 
-    center_camera(&state.player.rigid_body.position);
+    center_camera(&state.player.rigid_body.position, &state.tile_map);
     state.player.draw();
     state.harvesters.iter().for_each(|h| h.draw());
     state.save();
