@@ -28,18 +28,18 @@ impl Player {
             move_speed_max: 12.0,
             coyote_timer: 0,
             jump_buffer_timer: 0,
-            gravity: 5.,
+            gravity: 6.,
             max_gravity: 25.,
             is_facing_left: true,
             acceleration: 6.,
             deceleration: 2.0,
-            jump_force: 50.,
+            jump_force: 30.,
             coyote_timer_duration: 3,
             jump_buffer_timer_duration: 8,
             movement_status: MovementStatus::IsFalling,
         }
     }
-    
+   
     pub fn handle_input(&mut self) {
         let gp = gamepad(0);
         
@@ -90,14 +90,13 @@ impl Player {
                 {
                     Vector2::new(0., self.gravity * 6.)
                 } else if self.rigid_body.velocity.y < 25. {
-                    Vector2::new(0., self.gravity / 1.5)
+                    Vector2::new(0., self.gravity / 3.)
                 } else { 
                     Vector2::new(0.,  self.gravity )
                 };
             self.rigid_body.add_velocity(current_gravity);
             self.rigid_body.clamp_velocity_y(Vector2::new(-self.jump_force, self.max_gravity));
         }
-        // Apply custom gravity
 
         if self.coyote_timer > 0 {
             self.coyote_timer -= 1;
@@ -110,18 +109,18 @@ impl Player {
     
     pub fn check_collision_tilemap(&mut self, tiles: &[Tile]) {
         // Check collision down
-        if self.rigid_body.velocity.y > 0.0 {
-            match check_collision(&self.rigid_body.position + &Vector2::new(0.0, self.rigid_body.velocity.y), Direction::Down, tiles) {
-                Some(tile) => {
+        match check_collision(&self.rigid_body.position + &Vector2::new(0.0, self.rigid_body.velocity.y), Direction::Down, tiles) {
+            Some(tile) => {
+                if self.rigid_body.velocity.y > 0.0 {
                     self.rigid_body.stop_y();
                     self.snap_to_tile(tile, Direction::Down);
                     self.movement_status = MovementStatus::IsLanded;
-                },
-                None => {
-                    if self.movement_status == MovementStatus::IsLanded {
-                        self.coyote_timer = self.coyote_timer_duration;
-                        self.movement_status = MovementStatus::IsFalling;
-                    }
+                }
+            },
+            None => {
+                if self.movement_status == MovementStatus::IsLanded {
+                    self.coyote_timer = self.coyote_timer_duration;
+                    self.movement_status = MovementStatus::IsFalling;
                 }
             }
         }
