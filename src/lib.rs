@@ -1,8 +1,8 @@
 mod vector2;
 use vector2::*;
 
-mod rigid_body;
-use rigid_body::*;
+mod actor;
+use actor::*;
 
 mod harvester;
 use harvester::*;
@@ -74,15 +74,15 @@ turbo::go!({
         audio::play("bg-music-nothing");
     }
     state.player.handle_input();
-    state.harvesters.iter_mut().for_each(|h| h.rigid_body.apply_gravity());
+    state.harvesters.iter_mut().for_each(|h| h.actor.apply_gravity());
 
     state.player.check_collision_tilemap(&state.tile_map.tiles);
-    state.harvesters.iter_mut().for_each(|h| h.rigid_body.check_collision_tilemap(&state.tile_map.tiles));
+    state.harvesters.iter_mut().for_each(|h| h.actor.check_collision_tilemap(&state.tile_map.tiles));
 
-    state.player.rigid_body.update_position();
-    state.harvesters.iter_mut().for_each(|h| h.rigid_body.update_position());
+    state.player.actor.update_position();
+    state.harvesters.iter_mut().for_each(|h| h.actor.update_position());
 
-    center_camera(&state.player.rigid_body.position, &state.tile_map);
+    center_camera(&state.player.actor.position, &state.tile_map);
     state.player.draw();
     state.harvesters.iter().for_each(|h| h.draw());
     state.save();

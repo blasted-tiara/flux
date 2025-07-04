@@ -3,13 +3,13 @@ use crate::*;
 const GRAVITY: f32 = 1.6;
 
 #[derive(BorshDeserialize, BorshSerialize, Debug, Clone, PartialEq)]
-pub struct RigidBody {
+pub struct Actor {
     pub position: Vector2,
     pub rotation: f32,
     pub velocity: Vector2,
 }
 
-impl RigidBody {
+impl Actor {
     pub fn update_position(&mut self) {
         self.position += &self.velocity;
     }

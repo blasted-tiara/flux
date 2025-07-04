@@ -2,13 +2,13 @@ use crate::*;
 
 #[derive(BorshDeserialize, BorshSerialize, Debug, Clone, PartialEq)]
 pub struct Harvester {
-    pub rigid_body: RigidBody,
+    pub actor: Actor,
 }
 
 impl Harvester {
     pub fn new(x: f32, y: f32, rotation: f32) -> Self {
         Self {
-            rigid_body: RigidBody {
+            actor: Actor {
                 position: Vector2::new(x, y),
                 velocity: Vector2::zero(),
                 rotation: rotation,
@@ -19,9 +19,9 @@ impl Harvester {
     pub fn draw(&self) {
         sprite!(
             "harvester",
-            x = self.rigid_body.position.x,
-            y = self.rigid_body.position.y,
-            rotation = self.rigid_body.rotation_degrees(),
+            x = self.actor.position.x,
+            y = self.actor.position.y,
+            rotation = self.actor.rotation_degrees(),
         );
     }
 }
