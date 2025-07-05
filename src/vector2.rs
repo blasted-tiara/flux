@@ -20,6 +20,14 @@ impl Vector2 {
             y: 0.0,
         }
     }
+    
+    pub fn clamp_x(&mut self, floor: f32, ceil: f32) {
+        self.x = self.x.clamp(floor, ceil);
+    }
+    
+    pub fn clamp_y(&mut self, floor: f32, ceil: f32) {
+        self.y = self.y.clamp(floor, ceil);
+    }
 }
 
 impl fmt::Display for Vector2 {
@@ -32,6 +40,14 @@ impl ops::Add for &Vector2 {
     type Output = Vector2;
 
     fn add(self, rhs: &Vector2) -> Self::Output {
+        Vector2::new(self.x + rhs.x, self.y + rhs.y)
+    }
+}
+
+impl ops::Add for Vector2 {
+    type Output = Vector2;
+    
+    fn add(self, rhs: Vector2) -> Self::Output {
         Vector2::new(self.x + rhs.x, self.y + rhs.y)
     }
 }

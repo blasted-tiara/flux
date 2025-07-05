@@ -19,6 +19,12 @@ use tilemap::*;
 mod camera;
 use camera::*;
 
+mod bound;
+use bound::*;
+
+mod solid;
+use solid::*;
+
 use core::fmt;
 use std::ops;
 use std::f32::consts::PI;
@@ -40,8 +46,8 @@ turbo::init!(
                 &[1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 1],
                 &[1, 1, 1, 1,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 1],
                 &[1, 1, 1, 1,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 1, 1],
-                &[1, 1, 1, 1,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 1, 1],
-                &[1, 1, 1, 1,  1, 1, 0, 0,  1, 1, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 1, 1, 1],
+                &[1, 1, 1, 1,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 1,  1, 1, 1, 1,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 1, 1],
+                &[1, 1, 1, 1,  1, 1, 0, 0,  1, 1, 0, 0,  1, 1, 1, 1,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 1, 1, 1],
                 &[1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 1, 1, 1],
                 &[1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1],
             ],
@@ -74,16 +80,19 @@ turbo::go!({
         audio::play("bg-music-nothing");
     }
     state.player.handle_input();
-    state.harvesters.iter_mut().for_each(|h| h.actor.apply_gravity());
+    state.harvesters.iter_mut().for_each(|h| h.apply_gravity());
 
-    state.player.check_collision_tilemap(&state.tile_map.tiles);
-    state.harvesters.iter_mut().for_each(|h| h.actor.check_collision_tilemap(&state.tile_map.tiles));
+    let mut solids: Vec<&Solid> = vec![];
+    for tile in &state.tile_map.tiles {
+        solids.push(&tile.solid);        
+    }
 
-    state.player.actor.update_position();
-    state.harvesters.iter_mut().for_each(|h| h.actor.update_position());
+    state.player.actor_move(&solids);
+    state.harvesters.iter_mut().for_each(|h| h.actor_move(&solids));
 
-    center_camera(&state.player.actor.position, &state.tile_map);
+    center_camera(&state.player.get_position(), &state.tile_map);
     state.player.draw();
-    state.harvesters.iter().for_each(|h| h.draw());
+    state.player.draw_bounding_box();
+    state.harvesters.iter().for_each(|h| { h.draw(); h.draw_bounding_box(); } );
     state.save();
 });

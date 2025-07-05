@@ -1,136 +1,79 @@
 use crate::*;
 
-const GRAVITY: f32 = 1.6;
-
 #[derive(BorshDeserialize, BorshSerialize, Debug, Clone, PartialEq)]
 pub struct Actor {
     pub position: Vector2,
-    pub rotation: f32,
-    pub velocity: Vector2,
+    remainder: Vector2,
+    width: f32,
+    height: f32,
 }
 
 impl Actor {
-    pub fn update_position(&mut self) {
-        self.position += &self.velocity;
-    }
-    
-    pub fn apply_gravity(&mut self) {
-        self.add_velocity(Vector2::new(0.0, GRAVITY));
-    }
-    
-    pub fn add_velocity(&mut self, velocity: Vector2) {
-        self.velocity += &velocity;
-    }
-    
-    pub fn clamp_velocity_x(&mut self, max_velocity: Vector2) {
-        self.velocity.x = self.velocity.x.clamp(max_velocity.x, max_velocity.y);
-    }
-    
-    pub fn clamp_velocity_y(&mut self, max_velocity: Vector2) {
-        self.velocity.y = self.velocity.y.clamp(max_velocity.x, max_velocity.y);
-    }
-    
-    pub fn stop_y(&mut self) {
-        self.velocity.y = 0.0;
-    }
-    
-    pub fn rotation_degrees(&self) -> i32 {
-        (self.rotation * 360.0 / (2.0 * PI)) as i32
-    }
-
-    pub fn check_collision_tilemap(&mut self, tiles: &[Tile]) {
-        // Check collision down
-        if self.velocity.y > 0.0 {
-            match check_collision(&self.position + &Vector2::new(0.0, self.velocity.y), Direction::Down, tiles) {
-                Some(_) => {
-                    self.stop_y();
-                }
-                None => {}
-            }
+    pub fn new(position: Vector2, width: f32, height: f32) -> Self {
+        Self {
+            position,
+            remainder: Vector2::zero(),
+            width,
+            height,
         }
+    }
 
-        // Check collision up
-        if self.velocity.y < 0.0 {
-            while self.velocity.y < 0.0 {
-                match check_collision(&self.position + &Vector2::new(0.0, self.velocity.y), Direction::Up, tiles) {
-                    Some(_) => { self.add_velocity(Vector2::new(0.0, 1.0)); }
-                    None => { break; }
+    pub fn move_x<F: FnMut()>(&mut self, solids: &Vec<&Solid>, amount: f32, mut on_collide: F) {
+        let mut steps_to_move = amount.trunc() as i32; 
+        
+        if steps_to_move != 0 {
+            self.remainder.x -= steps_to_move as f32;
+            let sign = steps_to_move.signum();
+            while steps_to_move != 0 {
+                if !collide_at(&solids, self.get_bound() + &Vector2::new(sign as f32, 0.)) {
+                    self.position.x += sign as f32;
+                    steps_to_move -= sign;
+                } else {
+                    on_collide();
+                    break;
                 }
             }
         }
-
-        // Check collision right
-        if self.velocity.x > 0.0 {
-            while self.velocity.x > 0.0 {
-                match check_collision(&self.position + &Vector2::new(self.velocity.x, 0.0), Direction::Right, tiles) {
-                    Some(_) => { self.add_velocity(Vector2::new(-1.0, 0.0)); }
-                    None => { break; }
+    }
+    
+    pub fn move_y<F: FnMut(bool)>(&mut self, solids: &Vec<&Solid>, amount: f32, mut on_collide: F) {
+        let mut steps_to_move = amount.trunc() as i32; 
+        
+        if steps_to_move != 0 {
+            self.remainder.y -= steps_to_move as f32;
+            let sign = steps_to_move.signum();
+            while steps_to_move != 0 {
+                if !collide_at(&solids, self.get_bound() + &Vector2::new(0., sign as f32)) {
+                    self.position.y += sign as f32;
+                    steps_to_move -= sign;
+                } else {
+                    on_collide(true);
+                    break;
                 }
             }
-        }
-
-        // Check collision left
-        if self.velocity.x < 0.0 {
-            while self.velocity.x < 0.0 {
-                match check_collision( &self.position + &Vector2::new(self.velocity.x, 0.0), Direction::Left, tiles) {
-                    Some(_) => { self.add_velocity(Vector2::new(1.0, 0.0)); }
-                    None => { break; }
-                }
-            }
+            on_collide(false);
         }
     }
 }
 
-//check collision betwen the player and the tilemap
-pub fn check_collision(
-    position: Vector2,
-    direction: Direction,
-    tiles: &[Tile],
-) -> Option<&Tile> {
-    //Width and height of sprite art
-    let w: f32 = 48.;
-    let h: f32 = 55.;
-    //Padding between top and left for where sprite art begins
-    let pad_x: f32 = 2.;
-    let pad_y: f32 = 3.;
-    let (check_x1, check_y1, check_x2, check_y2) = match direction {
-        Direction::Up => (
-            position.x + pad_x,
-            position.y + pad_y,
-            position.x + pad_x + w,
-            position.y + pad_y,
-        ),
-        Direction::Down => (
-            position.x + pad_x,
-            position.y + pad_y + h,
-            position.x + pad_x + w,
-            position.y + pad_y + h,
-        ),
-        Direction::Left => (
-            position.x + pad_x - 1.,
-            position.y + pad_y,
-            position.x - 1.,
-            position.y + pad_y + h,
-        ),
-        Direction::Right => (
-            position.x + pad_x + w + 1.,
-            position.y + pad_y,
-            position.x + pad_x + w + 1.,
-            position.y + pad_y + h,
-        ),
-    };
-
-    for tile in tiles {
-        if tile.contains(check_x1, check_y1) || tile.contains(check_x2, check_y2) {
-            return Some(&tile)
+impl Bounded for Actor {
+    fn get_bound(&self) -> BoundingBox {
+        BoundingBox {
+            top: self.position.y - self.height / 2.,
+            right: self.position.x + self.width / 2.,
+            bottom: self.position.y + self.height / 2.,
+            left: self.position.x - self.width / 2.,
         }
     }
-    None
 }
 
-pub enum Direction {
-    Up,
-    Down,
-    Left,
-    Right,
+//check collision betwen an actor and a set of solids
+pub fn collide_at(solids: &Vec<&Solid>, bounding_box: BoundingBox) -> bool {
+    for solid in solids {
+        let bounds = solid.get_bound();
+        if solid.get_bound().intersects(&bounding_box) {
+            return true;
+        }
+    }
+    false
 }

@@ -16,7 +16,7 @@ impl TileMap {
         for j in 0..data.len() {
             for i in 0..data[j].len() {
                 if data[j][i] == 1 {
-                    tiles.push(Tile::new(i, j, tile_size_x, tile_size_y));
+                    tiles.push(Tile::new(Vector2 { x: (i as f32 + 0.5) * tile_size_x as f32, y: (j as f32 + 0.5) * tile_size_x as f32 }, tile_size_x as f32, tile_size_y as f32));
                 }
             }
         }
