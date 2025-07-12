@@ -2,7 +2,7 @@ use crate::*;
 
 #[derive(BorshDeserialize, BorshSerialize, Debug, Clone, PartialEq)]
 pub struct Player {
-    actor: Actor,
+    pub actor: Actor,
     velocity: Vector2,
     is_facing_left: bool,
     coyote_timer: i32,
@@ -16,12 +16,14 @@ pub struct Player {
     coyote_timer_duration: i32,
     jump_buffer_timer_duration: i32,
     movement_status: MovementStatus,
+    try_pick_item: bool,
+    picked_item: Option<ActorId>,
 }
 
 impl Player {
     pub fn new(x: f32, y: f32) -> Self {
         Self {
-            actor: Actor::new(Vector2::new(x, y),52., 48.),
+            actor: Actor::new(Vector2::new(x, y),45., 62.),
             velocity: Vector2::new(0., 0.),
             move_speed_max: 12.0,
             coyote_timer: 0,
@@ -35,6 +37,8 @@ impl Player {
             coyote_timer_duration: 3,
             jump_buffer_timer_duration: 8,
             movement_status: MovementStatus::IsFalling,
+            try_pick_item: false,
+            picked_item: Option::None,
         }
     }
    
@@ -50,6 +54,9 @@ impl Player {
                     self.velocity.y = -self.jump_force;
                     self.movement_status = MovementStatus::InJump;
                     audio::play("jump-sfx-nothing");
+                }
+                if gp.a.just_pressed() {
+                    self.try_pick_item = true;
                 }
             },
             MovementStatus::InJump => {
@@ -105,6 +112,10 @@ impl Player {
         }
     }
     
+    pub fn pick_item(&mut self, actors: &Vec<&Actor>) {
+        
+    }
+    
     pub fn actor_move(&mut self, tiles: &Vec<&Solid>) {
         let current_velocity_x = self.velocity.x;
         let current_velocity_y = self.velocity.y;
@@ -140,16 +151,16 @@ impl Player {
         let BoundingBox {top, right, bottom, left} = self.actor.get_bound();
         if self.movement_status == MovementStatus::IsLanded && self.velocity.x != 0. {
             sprite!(
-                "kiwi_walking",
+                "player1",
                 x = left as i32,
                 y = top as i32,
                 flip_x = self.is_facing_left,
             );
         } else {
-            let x_offset = if self.is_facing_left { 7 } else { 3 };
-            let y_offset = 15;
+            let x_offset = if self.is_facing_left { 8 } else { 10 };
+            let y_offset = 2;
             sprite!(
-                "kiwi_idle",
+                "player1",
                 x = left as i32 - x_offset,
                 y = top as i32 - y_offset,
                 flip_x = self.is_facing_left,

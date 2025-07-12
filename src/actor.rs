@@ -6,6 +6,7 @@ pub struct Actor {
     remainder: Vector2,
     width: f32,
     height: f32,
+    carried_by_player: bool,
 }
 
 impl Actor {
@@ -15,6 +16,7 @@ impl Actor {
             remainder: Vector2::zero(),
             width,
             height,
+            carried_by_player: false,
         }
     }
 
@@ -25,7 +27,8 @@ impl Actor {
             self.remainder.x -= steps_to_move as f32;
             let sign = steps_to_move.signum();
             while steps_to_move != 0 {
-                if !collide_at(&solids, self.get_bound() + &Vector2::new(sign as f32, 0.)) {
+                let next_step = self.get_bound() + &Vector2::new(sign as f32, 0.);
+                if !collide_at(&solids, &next_step) {
                     self.position.x += sign as f32;
                     steps_to_move -= sign;
                 } else {
@@ -43,7 +46,8 @@ impl Actor {
             self.remainder.y -= steps_to_move as f32;
             let sign = steps_to_move.signum();
             while steps_to_move != 0 {
-                if !collide_at(&solids, self.get_bound() + &Vector2::new(0., sign as f32)) {
+                let next_step = self.get_bound() + &Vector2::new(0., sign as f32);
+                if !collide_at(&solids, &next_step) {
                     self.position.y += sign as f32;
                     steps_to_move -= sign;
                 } else {
@@ -68,10 +72,18 @@ impl Bounded for Actor {
 }
 
 //check collision betwen an actor and a set of solids
-pub fn collide_at(solids: &Vec<&Solid>, bounding_box: BoundingBox) -> bool {
+pub fn collide_at(solids: &Vec<&Solid>, bounding_box: &BoundingBox) -> bool {
     for solid in solids {
-        let bounds = solid.get_bound();
         if solid.get_bound().intersects(&bounding_box) {
+            return true;
+        }
+    }
+    false
+}
+
+pub fn collide_with(actors: &Vec<&Actor>, bounding_box: &BoundingBox) -> bool {
+    for actor in actors {
+        if actor.get_bound().intersects(&bounding_box) {
             return true;
         }
     }
