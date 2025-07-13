@@ -106,5 +106,40 @@ pub fn show_total_flux(total_flux: f32, screen_center: Vector2) {
         y = screen_center.y - 250., 
         font = "large",
         color = 0x556677ff,
-    )
+    );
+    
+    rect!(
+        w = 40,
+        h = 200,
+        x = screen_center.x - 500.,
+        y = screen_center.y - 200.,
+        color = 0xc85dd9ff,
+    );
+
+    rect!(
+        w = 32,
+        h = 192,
+        x = screen_center.x - 496.,
+        y = screen_center.y - 196.,
+        color = 0x630f75ff,
+    );
+    
+    let bar_height = 192. * total_flux / 1200.;
+    if total_flux > 0. {
+        rect!(
+            w = 32,
+            h = bar_height,
+            x = screen_center.x - 496.,
+            y = screen_center.y - 196. + 192. / 2. - bar_height,
+            color = 0xff0000ff,
+        )
+    } else {
+        rect!(
+            w = 32,
+            h = -bar_height,
+            x = screen_center.x - 496.,
+            y = screen_center.y - 196. + 192. / 2.,
+            color = 0x0000ffff,
+        )
+    }
 }
