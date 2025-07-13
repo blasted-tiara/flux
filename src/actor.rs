@@ -3,6 +3,7 @@ use crate::*;
 #[derive(BorshDeserialize, BorshSerialize, Debug, Clone, PartialEq)]
 pub struct Actor {
     pub position: Vector2,
+    pub is_child: bool,
     remainder: Vector2,
     width: f32,
     height: f32,
@@ -12,6 +13,7 @@ pub struct Actor {
 impl Actor {
     pub fn new(position: Vector2, width: f32, height: f32) -> Self {
         Self {
+            is_child: false,
             position,
             remainder: Vector2::zero(),
             width,
@@ -33,7 +35,7 @@ impl Actor {
                     steps_to_move -= sign;
                 } else {
                     on_collide();
-                    break;
+                    return;
                 }
             }
         }
@@ -52,7 +54,7 @@ impl Actor {
                     steps_to_move -= sign;
                 } else {
                     on_collide(true);
-                    break;
+                    return;
                 }
             }
             on_collide(false);

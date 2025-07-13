@@ -25,6 +25,7 @@ impl Harvester {
         match actor_option {
             None => return,
             Some(actor) => {
+                if actor.is_child { return };
                 let current_velocity_x = self.velocity.x;
                 let current_velocity_y = self.velocity.y;
 
@@ -44,8 +45,16 @@ impl Harvester {
         }
     }
     
-    pub fn apply_gravity(self: &mut Self) {
-        self.velocity += &Vector2::new(0.0, GRAVITY);
+    pub fn apply_gravity(self: &mut Self, actor_manager: &mut ActorManager) {
+        let actor_option = actor_manager.get_actor(self.actor);
+        match actor_option {
+            None => {},
+            Some(actor) => {
+                 if !actor.is_child {
+                    self.velocity += &Vector2::new(0.0, GRAVITY);
+                 }
+            }
+        }
     }
     
     pub fn draw(&self, actor_manager: &ActorManager) {

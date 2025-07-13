@@ -7,7 +7,7 @@ pub type ActorId = u32;
 #[derive(BorshDeserialize, BorshSerialize, Debug, Clone, PartialEq)]
 pub struct ActorManager {
     next_id: ActorId,
-    actors: HashMap<ActorId, Actor>,
+    pub actors: HashMap<ActorId, Actor>,
 }
 
 impl ActorManager {

@@ -62,7 +62,7 @@ turbo::init!(
         let mut actor_manager = ActorManager::new();
     
         let mut harvesters = vec![];
-        harvesters.push(Harvester::new(200., 60., 0.0, &mut actor_manager));
+        harvesters.push(Harvester::new(150., 60., 0.0, &mut actor_manager));
         harvesters.push(Harvester::new(300., 40., PI / 2., &mut actor_manager));
         harvesters.push(Harvester::new(450., 20., PI, &mut actor_manager));
         
@@ -88,9 +88,9 @@ turbo::go!({
     }
     
     // Add velocity and forces to player
-    state.player.handle_input();
+    state.player.handle_input(&mut state.actor_manager);
     // Add gravity to 
-    state.harvesters.iter_mut().for_each(|h| h.apply_gravity());
+    state.harvesters.iter_mut().for_each(|h| h.apply_gravity(&mut state.actor_manager));
 
     // List of all solids in the level
     let mut solids: Vec<&Solid> = vec![];
@@ -98,8 +98,9 @@ turbo::go!({
         solids.push(&tile.solid);        
     }
     
+    state.player.pick_item(&mut state.actor_manager);
     // Move player
-    state.player.actor_move(&solids);
+    state.player.actor_move(&solids, &mut state.actor_manager);
 
     //for harvester in &state.harvesters {
     //    harvester.actor_move(&solids, &actors);

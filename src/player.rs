@@ -42,7 +42,7 @@ impl Player {
         }
     }
    
-    pub fn handle_input(&mut self) {
+    pub fn handle_input(&mut self, actor_manager: &mut ActorManager) {
         let gp = gamepad(0);
         
         let jump_just_pressed = gp.up.just_pressed() || gp.start.just_pressed();
@@ -54,9 +54,6 @@ impl Player {
                     self.velocity.y = -self.jump_force;
                     self.movement_status = MovementStatus::InJump;
                     audio::play("jump-sfx-nothing");
-                }
-                if gp.a.just_pressed() {
-                    self.try_pick_item = true;
                 }
             },
             MovementStatus::InJump => {
@@ -90,18 +87,16 @@ impl Player {
         }
 
         self.velocity.clamp_x(-self.move_speed_max, self.move_speed_max);
-        if self.movement_status != MovementStatus::IsLanded {
-            let current_gravity = if self.movement_status == MovementStatus::IsFalling && !jump_pressed
-                {
-                    Vector2::new(0., self.gravity * 6.)
-                } else if self.velocity.y < 25. {
-                    Vector2::new(0., self.gravity / 3.)
-                } else { 
-                    Vector2::new(0.,  self.gravity )
-                };
-            self.velocity += &current_gravity;
-            self.velocity.clamp_y(-self.jump_force, self.max_gravity);
-        }
+        let current_gravity = if self.movement_status == MovementStatus::IsFalling && !jump_pressed
+            {
+                Vector2::new(0., self.gravity * 6.)
+            } else if self.velocity.y < 25. {
+                Vector2::new(0., self.gravity / 3.)
+            } else { 
+                Vector2::new(0.,  self.gravity )
+            };
+        self.velocity += &current_gravity;
+        self.velocity.clamp_y(-self.jump_force, self.max_gravity);
 
         if self.coyote_timer > 0 {
             self.coyote_timer -= 1;
@@ -110,13 +105,51 @@ impl Player {
         if self.jump_buffer_timer > 0 {
             self.jump_buffer_timer -= 1;
         }
+
+        if gp.a.just_pressed() {
+            match self.picked_item {
+                None => {
+                    self.try_pick_item = true;
+                },
+                Some(actor_id) => {
+                    match actor_manager.get_actor_mut(actor_id) {
+                        Some(actor) => {
+                            self.picked_item = Option::None;
+                            actor.is_child = false;
+                        },
+                        None => {},
+                    }
+                }
+            }
+        }
     }
     
-    pub fn pick_item(&mut self, actors: &Vec<&Actor>) {
-        
+    pub fn pick_item(&mut self, actor_manager: &mut ActorManager) {
+        if self.try_pick_item {
+            let distance_tolerance = 40.;
+            let player_bounding_box = self.actor.get_bound();
+            for (actor_id, actor) in &mut actor_manager.actors {
+                let item_bounding_box = actor.get_bound();
+                if (player_bounding_box.bottom - item_bounding_box.bottom).abs() < distance_tolerance {
+                    if self.is_facing_left {
+                        // check if there's an item close by to the left
+                        if (item_bounding_box.right - player_bounding_box.left).abs() < distance_tolerance {
+                            self.picked_item = Option::Some(*actor_id);
+                            actor.is_child = true;
+                        }
+                    } else {
+                        if (item_bounding_box.left - player_bounding_box.right).abs() < distance_tolerance {
+                            self.picked_item = Option::Some(*actor_id);
+                            actor.is_child = true;
+                        }
+                    }
+                }
+            }
+            self.try_pick_item = false;
+        }
     }
     
-    pub fn actor_move(&mut self, tiles: &Vec<&Solid>) {
+    pub fn actor_move(&mut self, tiles: &Vec<&Solid>, actor_manager: &mut ActorManager) {
         let current_velocity_x = self.velocity.x;
         let current_velocity_y = self.velocity.y;
 
@@ -127,7 +160,7 @@ impl Player {
 
         let on_y_collision = |collision_happened: bool| {
             if collision_happened {
-                if self.velocity.y > 0.0 {
+                if self.velocity.y >= 0.0 {
                     self.movement_status = MovementStatus::IsLanded;
                 }
                 self.velocity.y = 0.;
@@ -141,6 +174,25 @@ impl Player {
         };
 
         self.actor.move_y(tiles, current_velocity_y, on_y_collision);
+
+        match self.picked_item {
+            Some(actor_id) => {
+                let item_option = actor_manager.get_actor_mut(actor_id);
+                match item_option {
+                    Some(actor) => {
+                        let backpack_offset = 15.;
+                        if self.is_facing_left {
+                            actor.position.x = self.actor.position.x + backpack_offset;
+                        } else {
+                            actor.position.x = self.actor.position.x - backpack_offset;
+                        }
+                        actor.position.y = self.actor.position.y;
+                    }
+                    None => {},
+                }
+            },
+            None => {},
+        }
     }
     
     pub fn get_position(&self) -> Vector2 {
