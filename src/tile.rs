@@ -21,6 +21,5 @@ impl Tile {
         let y = (self.solid.position.y - self.solid.height / 2.) as i32;
 
         sprite!("dirt", x = x, y = y);
-        rect!(w = 1, h = 1, x = x, y = y, color = 0xff00ffff);
     }
 }
