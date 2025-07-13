@@ -1,5 +1,3 @@
-use turbo::canvas::camera::y;
-
 use crate::*;
 
 const GRAVITY: f32 = 1.6;
@@ -9,6 +7,8 @@ pub struct Harvester {
     pub actor: ActorId,
     velocity: Vector2,
     rotation: f32,
+    flux_field: Vector2,
+    flux: f32,
 }
 
 impl Harvester {
@@ -17,6 +17,8 @@ impl Harvester {
             actor: actor_manager.spawn_actor(Actor::new(Vector2::new(x, y), 36., 36.,)),
             velocity: Vector2::zero(),
             rotation: rotation,
+            flux_field: Vector2::zero(),
+            flux: 0.,
         }        
     }
 
@@ -56,6 +58,24 @@ impl Harvester {
             }
         }
     }
+    
+    pub fn calculate_flux(&mut self, actor_manager: &mut ActorManager, flux_cores: &Vec<Flux>) -> f32 {
+        let actor = actor_manager.get_actor(self.actor);
+        match actor {
+            Some(actor) => {
+                let bounding_box = actor.get_bound();
+                let (start, end) = get_flux_line(self.rotation, &bounding_box);
+                
+                self.flux_field = calculate_line_flux(&start, &end, 6, flux_cores);
+                self.flux = (end - start).get_normal_vector().normalize().dot(&self.flux_field);
+                (end - start).get_normal_vector().normalize().draw_at_point(&actor.position, self.flux);
+                self.flux
+            },
+            None => { 0. }
+        }
+    }
+    
+    
     
     pub fn draw(&self, actor_manager: &ActorManager) {
         let actor_option = actor_manager.get_actor(self.actor);

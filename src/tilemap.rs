@@ -3,6 +3,7 @@ use crate::*;
 #[derive(BorshDeserialize, BorshSerialize, Debug, Clone, PartialEq)]
 pub struct TileMap {
     pub tiles: Vec<Tile>,
+    pub flux_cores: Vec<Flux>,
     height: f32,
     width: f32,
 }
@@ -10,18 +11,27 @@ pub struct TileMap {
 impl TileMap {
     pub fn new(data: &[&[u8]], tile_size_x: u32, tile_size_y: u32) -> Self {
         let mut tiles: Vec<Tile> = Vec::new();
+        let mut flux_cores: Vec<Flux> = Vec::new();
+
         let width = data[0].len() as f32 * tile_size_x as f32;
         let height = data.len() as f32 * tile_size_y as f32;
 
         for j in 0..data.len() {
             for i in 0..data[j].len() {
-                if data[j][i] == 1 {
+                let data_value = data[j][i];
+                if data_value == 1 {
                     tiles.push(Tile::new(Vector2 { x: (i as f32 + 0.5) * tile_size_x as f32, y: (j as f32 + 0.5) * tile_size_x as f32 }, tile_size_x as f32, tile_size_y as f32));
+                } else if data_value == 2 {
+                    flux_cores.push(Flux::new(2000., Vector2 { x: (i as f32 + 0.5) * tile_size_x as f32, y: (j as f32 + 0.5) * tile_size_x as f32 }, tile_size_x as f32, tile_size_y as f32));
+                } else if data_value == 3 {
+                    flux_cores.push(Flux::new(-2000. , Vector2 { x: (i as f32 + 0.5) * tile_size_x as f32, y: (j as f32 + 0.5) * tile_size_x as f32 }, tile_size_x as f32, tile_size_y as f32));
                 }
             }
         }
+
         TileMap {
             tiles,
+            flux_cores,
             width,
             height,
         }
@@ -35,4 +45,14 @@ impl TileMap {
         
         Vector2::new(position.x.clamp(min_x, max_x), position.y.clamp(min_y, max_y))
     } 
+
+    pub fn draw_flux_field(&self) {
+        for i in (0..self.width as i32).step_by(64) {
+            for j in (0..self.height as i32).step_by(64) {
+                let point = Vector2::new(i as f32, j as f32);
+                let net_flux = net_flux_field_at_point(&point, &self.flux_cores);
+                net_flux.draw_at_point(&point, 14. * (tick() % 80) as f32 / 80.);
+            }
+        }
+    }
 }

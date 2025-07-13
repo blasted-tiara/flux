@@ -28,6 +28,9 @@ use solid::*;
 mod actor_manager;
 use actor_manager::*;
 
+mod flux;
+use flux::*;
+
 use core::fmt;
 use std::ops;
 use std::f32::consts::PI;
@@ -45,15 +48,20 @@ turbo::init!(
     } = {
         let tile_map = TileMap::new(
             &[
+                &[0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1, 1, 1, 1,  1, 1, 1, 2,  3, 2, 3, 2,  3, 2, 3, 1,  1, 1, 1, 1],
+                &[1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 1],
+                &[1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 2],
                 &[1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 1],
                 &[1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 1],
+                &[1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  2, 3, 2, 3,  1, 1, 1, 1],
                 &[1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 1],
-                &[1, 1, 1, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 1],
+                &[1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 1],
+                &[1, 1, 1, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1, 1, 0, 0,  0, 0, 0, 0,  0, 0, 0, 1],
                 &[1, 1, 1, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 1, 1],
-                &[1, 1, 1, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 1,  1, 1, 1, 1,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 1, 1],
+                &[1, 1, 1, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 1,  1, 1, 1, 3,  0, 0, 2, 0,  0, 0, 0, 0,  0, 0, 1, 1],
                 &[1, 1, 1, 1,  1, 0, 0, 0,  0, 0, 0, 0,  1, 1, 1, 1,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 1, 1, 1],
                 &[1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 1, 1, 1],
-                &[1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1],
+                &[1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 2,  1, 1, 1, 1,  1, 1, 3, 1,  1, 1, 1, 1],
             ],
             64,
             64,
@@ -79,14 +87,6 @@ turbo::init!(
 turbo::go!({
     let mut state = GameState::load();
     
-    clear(0xadd8e6ff);
-    for t in &mut state.tile_map.tiles {
-        t.draw();
-    }
-    if !audio::is_playing("bg-music-nothing") {
-        audio::play("bg-music-nothing");
-    }
-    
     // Add velocity and forces to player
     state.player.handle_input(&mut state.actor_manager);
     // Add gravity to 
@@ -97,6 +97,9 @@ turbo::go!({
     for tile in &state.tile_map.tiles {
         solids.push(&tile.solid);        
     }
+    for flux in &state.tile_map.flux_cores {
+        solids.push(&flux.solid);
+    }
     
     state.player.pick_item(&mut state.actor_manager);
     // Move player
@@ -106,10 +109,31 @@ turbo::go!({
     //    harvester.actor_move(&solids, &actors);
     //}
     state.harvesters.iter_mut().for_each(|h| h.actor_move(&solids, &mut state.actor_manager));
-
+    
+    clear(0xadd8e6ff);
+    state.tile_map.draw_flux_field();
     center_camera(&state.player.get_position(), &state.tile_map);
-    state.harvesters.iter().for_each(|h| { h.draw(&mut state.actor_manager); /* h.draw_bounding_box(); */ } );
+    for t in &state.tile_map.tiles {
+        t.draw();
+    }
+    
+    for f in &state.tile_map.flux_cores {
+        f.draw();
+    }
+    
     state.player.draw();
+    state.harvesters.iter().for_each(|h| { h.draw(&mut state.actor_manager); /* h.draw_bounding_box(); */ } );
+    let mut total_flux = 0.;
+    for harvester in &mut state.harvesters {
+        total_flux += harvester.calculate_flux(&mut state.actor_manager, &state.tile_map.flux_cores);
+    }
+    
+    show_total_flux(total_flux, state.tile_map.lock_viewport_to_tilemap(&Vector2::new( state.player.get_position().x + 8., state.player.get_position().y + 8.), &Vector2::new(SCREEN_WIDTH as f32, SCREEN_HEIGHT as f32)));
+    
+    if !audio::is_playing("bg-music-nothing") {
+        audio::play("bg-music-nothing");
+    }
+
     //state.player.draw_bounding_box();
     state.save();
 });
