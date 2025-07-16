@@ -95,7 +95,15 @@ impl Vector2 {
     pub fn get_normal_vector(&self) -> Vector2 {
         self.rotate(PI / 2.)
     }
+
+    pub fn lerp(&self, rhs: &Vector2, alpha: f32) -> Vector2 {
+        Vector2::new(lerp(self.x, rhs.x, alpha), lerp(self.y, rhs.y, alpha))
+    }
  }
+
+pub fn lerp(a: f32, b: f32, alpha: f32) -> f32 {
+    a * (1. - alpha) + b * alpha
+}
 
 impl fmt::Display for Vector2 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
