@@ -14,7 +14,7 @@ pub struct Harvester {
 impl Harvester {
     pub fn new(x: f32, y: f32, rotation: f32, actor_manager: &mut ActorManager) -> Self {
         Self {
-            actor: actor_manager.spawn_actor(Actor::new(Vector2::new(x, y), 36., 36.,)),
+            actor: actor_manager.spawn_actor(Actor::new(Vector2::new(x, y), 18., 18.,)),
             velocity: Vector2::zero(),
             rotation: rotation,
             flux_field: Vector2::zero(),
@@ -82,14 +82,15 @@ impl Harvester {
         match actor_option {
             None => return,
             Some(actor) => {
-                let x_ofsset = 18.;
-                let y_ofsset = 18.;
+                let x_ofsset = 9.;
+                let y_ofsset = 9.;
 
                 sprite!(
                     "harvester",
                     x = actor.position.x - x_ofsset,
                     y = actor.position.y - y_ofsset,
                     rotation = self.rotation.to_degrees(),
+                    scale = 0.5, 
                 );
             }
         }

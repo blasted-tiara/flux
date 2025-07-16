@@ -1,3 +1,5 @@
+use std::cmp::max;
+
 use crate::*;
 
 #[derive(BorshDeserialize, BorshSerialize, Debug, Clone, PartialEq)]
@@ -23,17 +25,17 @@ pub struct Player {
 impl Player {
     pub fn new(x: f32, y: f32) -> Self {
         Self {
-            actor: Actor::new(Vector2::new(x, y),45., 62.),
+            actor: Actor::new(Vector2::new(x, y),20., 35.),
             velocity: Vector2::new(0., 0.),
-            move_speed_max: 12.0,
+            move_speed_max: 5.0,
             coyote_timer: 0,
             jump_buffer_timer: 0,
-            gravity: 6.,
-            max_gravity: 25.,
+            gravity: 2.,
+            max_gravity: 15.,
             is_facing_left: true,
-            acceleration: 6.,
-            deceleration: 2.0,
-            jump_force: 30.,
+            acceleration: 0.6,
+            deceleration: 0.4,
+            jump_force: 15.,
             coyote_timer_duration: 3,
             jump_buffer_timer_duration: 8,
             movement_status: MovementStatus::IsFalling,
@@ -80,18 +82,18 @@ impl Player {
             self.is_facing_left = false;
         } else {
             if self.velocity.x > 0. {
-                self.velocity += &Vector2::new(-self.deceleration, 0.0);
+                self.velocity.x = (self.velocity.x - self.deceleration).max(0.);
             } else if self.velocity.x < 0. {
-                self.velocity += &Vector2::new(self.deceleration, 0.0);
+                self.velocity.x = (self.velocity.x + self.deceleration).min(0.);
             }
         }
 
         self.velocity.clamp_x(-self.move_speed_max, self.move_speed_max);
         let current_gravity = if self.movement_status == MovementStatus::IsFalling && !jump_pressed
             {
-                Vector2::new(0., self.gravity * 6.)
+                Vector2::new(0., self.gravity * 1.)
             } else if self.velocity.y < 25. {
-                Vector2::new(0., self.gravity / 3.)
+                Vector2::new(0., self.gravity / 2.)
             } else { 
                 Vector2::new(0.,  self.gravity )
             };
@@ -202,26 +204,42 @@ impl Player {
     pub fn draw(&self) {
         let BoundingBox {top, right, bottom, left} = self.actor.get_bound();
         if self.movement_status == MovementStatus::IsLanded && self.velocity.x != 0. {
+            let x_offset = if self.is_facing_left { 5 } else { 10 };
+            let y_offset = 0;
             sprite!(
-                "player1",
-                x = left as i32,
-                y = top as i32,
+                "ChipmunckCharacter_walk",
+                x = left as i32 - x_offset,
+                y = top as i32 - y_offset,
                 flip_x = self.is_facing_left,
             );
         } else {
-            let x_offset = if self.is_facing_left { 8 } else { 10 };
-            let y_offset = 2;
+            let x_offset = if self.is_facing_left { 5 } else { 10 };
+            let y_offset = 0;
             sprite!(
-                "player1",
+                "ChipmunckCharacter_idle_36",
                 x = left as i32 - x_offset,
                 y = top as i32 - y_offset,
                 flip_x = self.is_facing_left,
             );
         }
+        self.draw_bounding_box();
+        self.write_info();
     }
     
     pub fn draw_bounding_box(&self) {
         self.actor.get_bound().draw_bounding_box();
+    }
+    
+    pub fn write_info(&self) {
+        let position = self.actor.position;
+        let mut a = "Speed: ".to_owned();
+        a.push_str(&(self.velocity.to_string()));
+
+        text!(
+            &a,
+            x = position.x as i32 - 15,
+            y = position.y as i32 - 28,
+        );
     }
 }
 

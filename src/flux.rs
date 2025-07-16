@@ -23,11 +23,11 @@ impl Flux {
         let y = (self.solid.position.y - self.solid.height / 2.) as i32;
 
         if self.strength > 0. {
-            sprite!("flux_source", x = x, y = y);
+            sprite!("flux_source", x = x, y = y, scale = SPRITE_SCALE);
         } else if self.strength < 0. {
-            sprite!("flux_sink", x = x, y = y);
+            sprite!("flux_sink", x = x, y = y, scale = SPRITE_SCALE);
         } else {
-            sprite!("dirt", x = x, y = y);
+            sprite!("dirt", x = x, y = y, scale = SPRITE_SCALE);
         }
     }
 }
@@ -102,43 +102,43 @@ pub fn show_total_flux(total_flux: f32, screen_center: Vector2) {
     a.push_str(&(total_flux.to_string()));
     text!(
         &a,
-        x = screen_center.x - 500.,
-        y = screen_center.y - 250., 
+        x = screen_center.x - 250.,
+        y = screen_center.y - 125., 
         font = "large",
         color = 0x556677ff,
     );
     
     rect!(
-        w = 40,
-        h = 200,
-        x = screen_center.x - 500.,
-        y = screen_center.y - 200.,
+        w = 20,
+        h = 100,
+        x = screen_center.x - 250.,
+        y = screen_center.y - 100.,
         color = 0xc85dd9ff,
     );
 
     rect!(
-        w = 32,
-        h = 192,
-        x = screen_center.x - 496.,
-        y = screen_center.y - 196.,
+        w = 16,
+        h = 96,
+        x = screen_center.x - 248.,
+        y = screen_center.y - 98.,
         color = 0x630f75ff,
     );
     
-    let bar_height = 192. * total_flux / 1200.;
+    let bar_height = 96. * total_flux / 1200.;
     if total_flux > 0. {
         rect!(
-            w = 32,
+            w = 16,
             h = bar_height,
-            x = screen_center.x - 496.,
-            y = screen_center.y - 196. + 192. / 2. - bar_height,
+            x = screen_center.x - 248.,
+            y = screen_center.y - 98. + 96. / 2. - bar_height,
             color = 0xff0000ff,
         )
     } else {
         rect!(
-            w = 32,
+            w = 16,
             h = -bar_height,
-            x = screen_center.x - 496.,
-            y = screen_center.y - 196. + 192. / 2.,
+            x = screen_center.x - 248.,
+            y = screen_center.y - 98. + 96. / 2.,
             color = 0x0000ffff,
         )
     }

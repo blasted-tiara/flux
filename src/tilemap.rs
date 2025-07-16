@@ -47,11 +47,11 @@ impl TileMap {
     } 
 
     pub fn draw_flux_field(&self) {
-        for i in (0..self.width as i32).step_by(64) {
-            for j in (0..self.height as i32).step_by(64) {
+        for i in (0..self.width as i32).step_by(16) {
+            for j in (0..self.height as i32).step_by(16) {
                 let point = Vector2::new(i as f32, j as f32);
                 let net_flux = net_flux_field_at_point(&point, &self.flux_cores);
-                net_flux.draw_at_point(&point, 14. * (tick() % 80) as f32 / 80.);
+                net_flux.draw_at_point(&point, f32::sqrt(0.4 * (tick() % 80) as f32 / 80.));
             }
         }
     }
