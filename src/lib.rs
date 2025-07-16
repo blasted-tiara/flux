@@ -22,6 +22,9 @@ use bound::*;
 mod solid;
 use solid::*;
 
+mod door;
+use door::*;
+
 mod actor_manager;
 use actor_manager::*;
 
@@ -36,6 +39,7 @@ use crate::prelude::camera::set_xy;
 
 const SCREEN_WIDTH: i32 = 512;
 const SCREEN_HEIGHT: i32 = 288;
+const FLUX_THRESHOLD: f32 = 400.;
 pub const SPRITE_SCALE: f32 = 0.25;
  
 turbo::init!(
@@ -59,9 +63,9 @@ turbo::init!(
                 &[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 1, 3, 1, 2, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,],
                 &[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,],
                 &[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1,],
-                &[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1,],
-                &[1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1,],
-                &[1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1,],
+                &[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11,0,],
+                &[1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 00,0,],
+                &[1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 00,0,],
                 &[1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1,],
                 &[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1,],
                 &[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,],
@@ -105,19 +109,33 @@ turbo::go!({
     for tile in &state.tile_map.tiles {
         solids.push(&tile.solid);        
     }
-    for flux in &state.tile_map.flux_cores {
-        solids.push(&flux.solid);
+    for flux_core in &state.tile_map.flux_cores {
+        solids.push(&flux_core.solid);
+    }
+    for door in &state.tile_map.doors {
+        if !door.open {
+            solids.push(&door.solid);
+        }
     }
     
     state.player.pick_item(&mut state.actor_manager);
     // Move player
     state.player.actor_move(&solids, &mut state.actor_manager);
 
-    //for harvester in &state.harvesters {
-    //    harvester.actor_move(&solids, &actors);
-    //}
+    // Move harvesters
     state.harvesters.iter_mut().for_each(|h| h.actor_move(&solids, &mut state.actor_manager));
+
+    let mut total_flux = 0.;
+    for harvester in &mut state.harvesters {
+        total_flux += harvester.calculate_flux(&mut state.actor_manager, &state.tile_map.flux_cores);
+    }
     
+    for door in &mut state.tile_map.doors {
+        if door.id == 0 {
+            door.open = total_flux >= FLUX_THRESHOLD;
+        }
+    }
+
     let camera_position = state.tile_map.lock_viewport_to_tilemap(&Vector2::new(state.player.actor.position.x, state.player.actor.position.y), &Vector2::new(SCREEN_WIDTH as f32, SCREEN_HEIGHT as f32));
     let new_camera_position_x = lerp(state.camera_center_x as f32, camera_position.x, 0.2);
     let new_camera_position_y = lerp(state.camera_center_y as f32, camera_position.y, 0.2);
@@ -136,12 +154,12 @@ turbo::go!({
         f.draw();
     }
     
+    for d in &state.tile_map.doors {
+        d.draw();
+    }
+    
     state.player.draw();
     state.harvesters.iter().for_each(|h| { h.draw(&mut state.actor_manager); /* h.draw_bounding_box(); */ } );
-    let mut total_flux = 0.;
-    for harvester in &mut state.harvesters {
-        total_flux += harvester.calculate_flux(&mut state.actor_manager, &state.tile_map.flux_cores);
-    }
     
     show_total_flux(total_flux, Vector2::new(state.camera_center_x as f32, state.camera_center_y as f32));
     

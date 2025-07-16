@@ -4,6 +4,7 @@ use crate::*;
 pub struct TileMap {
     pub tiles: Vec<Tile>,
     pub flux_cores: Vec<Flux>,
+    pub doors: Vec<Door>,
     height: f32,
     width: f32,
 }
@@ -12,6 +13,7 @@ impl TileMap {
     pub fn new(data: &[&[u8]], tile_size_x: u32, tile_size_y: u32) -> Self {
         let mut tiles: Vec<Tile> = Vec::new();
         let mut flux_cores: Vec<Flux> = Vec::new();
+        let mut doors: Vec<Door> = Vec::new();
 
         let width = data[0].len() as f32 * tile_size_x as f32;
         let height = data.len() as f32 * tile_size_y as f32;
@@ -21,6 +23,8 @@ impl TileMap {
                 let data_value = data[j][i];
                 if data_value == 1 {
                     tiles.push(Tile::new(Vector2 { x: (i as f32 + 0.5) * tile_size_x as f32, y: (j as f32 + 0.5) * tile_size_x as f32 }, tile_size_x as f32, tile_size_y as f32));
+                } else if data_value == 11 {
+                    doors.push(Door::new(0, (i as f32 + 0.5) * tile_size_x as f32, (j as f32 + 1.5) * tile_size_y as f32, tile_size_x as f32, tile_size_y as f32 * 3., false));
                 } else if data_value == 2 {
                     flux_cores.push(Flux::new(2000., Vector2 { x: (i as f32 + 0.5) * tile_size_x as f32, y: (j as f32 + 0.5) * tile_size_x as f32 }, tile_size_x as f32, tile_size_y as f32));
                 } else if data_value == 3 {
@@ -32,6 +36,7 @@ impl TileMap {
         TileMap {
             tiles,
             flux_cores,
+            doors,
             width,
             height,
         }
