@@ -30,12 +30,12 @@ impl Player {
             move_speed_max: 5.0,
             coyote_timer: 0,
             jump_buffer_timer: 0,
-            gravity: 2.,
-            max_gravity: 15.,
+            gravity: 2.0,
+            max_gravity: 20.,
             is_facing_left: true,
             acceleration: 0.6,
             deceleration: 0.4,
-            jump_force: 15.,
+            jump_force: 18.,
             coyote_timer_duration: 3,
             jump_buffer_timer_duration: 8,
             movement_status: MovementStatus::IsFalling,
@@ -92,8 +92,8 @@ impl Player {
         let current_gravity = if self.movement_status == MovementStatus::IsFalling && !jump_pressed
             {
                 Vector2::new(0., self.gravity * 1.)
-            } else if self.velocity.y < 25. {
-                Vector2::new(0., self.gravity / 2.)
+            } else if self.velocity.y.abs() < 4.0 {
+                Vector2::new(0., self.gravity / 4.)
             } else { 
                 Vector2::new(0.,  self.gravity )
             };
@@ -222,8 +222,6 @@ impl Player {
                 flip_x = self.is_facing_left,
             );
         }
-        self.draw_bounding_box();
-        self.write_info();
     }
     
     pub fn draw_bounding_box(&self) {

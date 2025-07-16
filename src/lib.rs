@@ -16,9 +16,6 @@ use tile::*;
 mod tilemap;
 use tilemap::*;
 
-mod camera;
-use camera::*;
-
 mod bound;
 use bound::*;
 
@@ -35,6 +32,8 @@ use core::fmt;
 use std::ops;
 use std::f32::consts::PI;
 
+use crate::prelude::camera::set_xy;
+
 const SCREEN_WIDTH: i32 = 512;
 const SCREEN_HEIGHT: i32 = 288;
 pub const SPRITE_SCALE: f32 = 0.25;
@@ -46,6 +45,8 @@ turbo::init!(
         tile_map: TileMap,
         last_time: u64,
         actor_manager: ActorManager,
+        camera_center_x: u32,
+        camera_center_y: u32, 
     } = {
         let tile_map = TileMap::new(
             &[
@@ -77,12 +78,16 @@ turbo::init!(
         harvesters.push(Harvester::new(300., 60., PI / 2., &mut actor_manager));
         harvesters.push(Harvester::new(450., 60., PI, &mut actor_manager));
         
+        let player_x = 390.;
+        let player_y = -50.;
         GameState {
-            player: Player::new(390., -50.),
+            player: Player::new(player_x, player_y),
             tile_map,
             harvesters,
             last_time: 0,
             actor_manager,
+            camera_center_x: 0,
+            camera_center_y: 0,
         }
     }
 );
@@ -113,9 +118,16 @@ turbo::go!({
     //}
     state.harvesters.iter_mut().for_each(|h| h.actor_move(&solids, &mut state.actor_manager));
     
+    let camera_position = state.tile_map.lock_viewport_to_tilemap(&Vector2::new(state.player.actor.position.x, state.player.actor.position.y), &Vector2::new(SCREEN_WIDTH as f32, SCREEN_HEIGHT as f32));
+    let new_camera_position_x = lerp(state.camera_center_x as f32, camera_position.x, 0.2);
+    let new_camera_position_y = lerp(state.camera_center_y as f32, camera_position.y, 0.2);
+    
+    state.camera_center_x = new_camera_position_x as u32;
+    state.camera_center_y = new_camera_position_y as u32;
+    set_xy(state.camera_center_x, state.camera_center_y);
+
     clear(0xadd8e6ff);
     state.tile_map.draw_flux_field();
-    center_camera(&state.player.get_position(), &state.tile_map);
     for t in &state.tile_map.tiles {
         t.draw();
     }
@@ -131,7 +143,7 @@ turbo::go!({
         total_flux += harvester.calculate_flux(&mut state.actor_manager, &state.tile_map.flux_cores);
     }
     
-    show_total_flux(total_flux, state.tile_map.lock_viewport_to_tilemap(&Vector2::new( state.player.get_position().x + 8., state.player.get_position().y + 8.), &Vector2::new(SCREEN_WIDTH as f32, SCREEN_HEIGHT as f32)));
+    show_total_flux(total_flux, Vector2::new(state.camera_center_x as f32, state.camera_center_y as f32));
     
     if !audio::is_playing("bg-music-nothing") {
         audio::play("bg-music-nothing");
