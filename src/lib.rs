@@ -137,8 +137,8 @@ turbo::go!({
     }
 
     let camera_position = state.tile_map.lock_viewport_to_tilemap(&Vector2::new(state.player.actor.position.x, state.player.actor.position.y), &Vector2::new(SCREEN_WIDTH as f32, SCREEN_HEIGHT as f32));
-    let new_camera_position_x = lerp(state.camera_center_x as f32, camera_position.x, 0.2);
-    let new_camera_position_y = lerp(state.camera_center_y as f32, camera_position.y, 0.2);
+    let new_camera_position_x = lerp(state.camera_center_x as f32, camera_position.x, 0.1);
+    let new_camera_position_y = lerp(state.camera_center_y as f32, camera_position.y, 0.1);
     
     state.camera_center_x = new_camera_position_x as u32;
     state.camera_center_y = new_camera_position_y as u32;
