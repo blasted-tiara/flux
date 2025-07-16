@@ -68,7 +68,7 @@ impl Harvester {
                 
                 self.flux_field = calculate_line_flux(&start, &end, 6, flux_cores);
                 self.flux = (end - start).get_normal_vector().normalize().dot(&self.flux_field);
-                (end - start).get_normal_vector().normalize().draw_at_point(&actor.position, self.flux);
+                (end - start).get_normal_vector().normalize().draw_at_point(&actor.position, self.flux / 10.);
                 self.flux
             },
             None => { 0. }
