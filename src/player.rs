@@ -1,5 +1,3 @@
-use std::cmp::max;
-
 use crate::*;
 
 #[derive(BorshDeserialize, BorshSerialize, Debug, Clone, PartialEq)]
