@@ -1,5 +1,3 @@
-use std::vec;
-
 use crate::*;
 
 #[derive(BorshDeserialize, BorshSerialize, Debug, Clone, PartialEq, Copy)]
