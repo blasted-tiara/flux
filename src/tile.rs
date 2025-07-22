@@ -20,6 +20,6 @@ impl Tile {
         let x = (self.solid.position.x - self.solid.width / 2.) as i32;
         let y = (self.solid.position.y - self.solid.height / 2.) as i32;
 
-        sprite!("dirt", x = x, y = y, scale = SPRITE_SCALE);
+        sprite!("Platform_Center", x = x, y = y);
     }
 }

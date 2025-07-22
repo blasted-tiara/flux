@@ -45,7 +45,7 @@ impl TileMap {
     pub fn lock_viewport_to_tilemap(self: &Self, position: &Vector2, viewport_dimensions: &Vector2) -> Vector2 {
         let min_x = viewport_dimensions.x / 2.;
         let max_x = self.width - viewport_dimensions.x / 2.;
-        let min_y = -100000000.;
+        let min_y = viewport_dimensions.y / 2.;
         let max_y = self.height - viewport_dimensions.y / 2.;
         
         Vector2::new(position.x.clamp(min_x, max_x), position.y.clamp(min_y, max_y))
