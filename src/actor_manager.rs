@@ -4,7 +4,7 @@ use crate::*;
 
 pub type ActorId = u32;
 
-#[derive(BorshDeserialize, BorshSerialize, Debug, Clone, PartialEq)]
+#[turbo::serialize]
 pub struct ActorManager {
     next_id: ActorId,
     pub actors: HashMap<ActorId, Actor>,

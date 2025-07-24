@@ -1,6 +1,6 @@
 use crate::*;
 
-#[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone)]
+#[turbo::serialize]
 pub struct Tile {
     pub solid: Solid,
 }

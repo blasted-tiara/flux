@@ -1,6 +1,6 @@
 use crate::*;
 
-#[derive(BorshDeserialize, BorshSerialize, Debug, Clone, PartialEq)]
+#[turbo::serialize]
 pub struct Player {
     pub actor: Actor,
     velocity: Vector2,
@@ -43,7 +43,7 @@ impl Player {
     }
    
     pub fn handle_input(&mut self, actor_manager: &mut ActorManager) {
-        let gp = gamepad(0);
+        let gp = gamepad::get(0);
         
         let jump_just_pressed = gp.up.just_pressed() || gp.start.just_pressed();
         let jump_pressed = gp.up.pressed() || gp.start.pressed();
@@ -239,7 +239,8 @@ impl Player {
     }
 }
 
-#[derive(BorshDeserialize, BorshSerialize, Debug, Clone, PartialEq)]
+#[turbo::serialize]
+#[derive(PartialEq)]
 enum MovementStatus {
     IsLanded,
     IsFalling,

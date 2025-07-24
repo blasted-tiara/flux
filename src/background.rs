@@ -1,6 +1,6 @@
 use crate::*;
 
-#[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone)]
+#[turbo::serialize]
 pub struct Background {
     pub layers: Vec<Layer>,
     pub default_color: u32,
@@ -22,7 +22,7 @@ impl Background {
     }
 }
 
-#[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone)]
+#[turbo::serialize]
 pub struct Layer {
     pub sprite: String,
     pub speed_x: f32,

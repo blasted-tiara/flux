@@ -3,8 +3,11 @@ name = "flux"
 version = "0.1.0"
 edition = "2024"
 
+[package.metadata.turbo]
+user = "54550ebc-839a-403e-9f4c-b1655b65c751"
+
 [dependencies]
-turbo = { version = "^3.0.0", package = "turbo-genesis-sdk" }
+turbo = { version = "4.0.0-alpha.36", package = "turbo-genesis-sdk" }
 
 [lib]
 crate-type = ["cdylib"]

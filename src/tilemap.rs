@@ -1,6 +1,8 @@
 use crate::*;
 
-#[derive(BorshDeserialize, BorshSerialize, Debug, Clone, PartialEq)]
+use sys::time::tick;
+
+#[turbo::serialize]
 pub struct TileMap {
     pub tiles: Vec<Tile>,
     pub flux_cores: Vec<Flux>,

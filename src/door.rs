@@ -1,6 +1,6 @@
 use crate::*;
 
-#[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone)]
+#[turbo::serialize]
 pub struct Door {
     pub id: u32,
     pub open: bool,

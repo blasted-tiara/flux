@@ -1,6 +1,6 @@
 use crate::*;
 
-#[derive(BorshDeserialize, BorshSerialize, Debug, Clone, PartialEq)]
+#[turbo::serialize]
 pub struct Actor {
     pub position: Vector2,
     pub is_child: bool,

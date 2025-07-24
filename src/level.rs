@@ -1,6 +1,6 @@
 use crate::*;
 
-#[derive(BorshSerialize, BorshDeserialize, PartialEq, Debug, Clone)]
+#[turbo::serialize]
 pub struct Level {
     pub tilemap: TileMap,
     pub harvesters: Vec<Harvester>,

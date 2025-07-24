@@ -9,3 +9,6 @@ height = 288
 
 [shader]
 default-surface-shader = "my-awesome-shader"
+
+[turbo-os]
+api-url = "https://os.turbo.computer"
