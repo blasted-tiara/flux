@@ -42,15 +42,10 @@ impl Player {
         }
     }
    
-    pub fn handle_input(&mut self, actor_manager: &mut ActorManager) {
-        let gp = gamepad::get(0);
-        
-        let jump_just_pressed = gp.up.just_pressed() || gp.start.just_pressed();
-        let jump_pressed = gp.up.pressed() || gp.start.pressed();
-        
+    pub fn handle_input(&mut self, actor_manager: &mut ActorManager, user_input: &UserInput) {
         match self.movement_status {
             MovementStatus::IsLanded => {
-                if jump_just_pressed || self.jump_buffer_timer > 0 {
+                if user_input.jump_just_pressed || self.jump_buffer_timer > 0 {
                     self.velocity.y = -self.jump_force;
                     self.movement_status = MovementStatus::InJump;
                     audio::play("jump-sfx-nothing");
@@ -62,20 +57,20 @@ impl Player {
                 }
             },
             MovementStatus::IsFalling => {
-                if self.coyote_timer > 0 && jump_just_pressed {
+                if self.coyote_timer > 0 && user_input.jump_just_pressed {
                     self.velocity.y = -self.jump_force;
                     self.movement_status = MovementStatus::InJump;
                     audio::play("jump-sfx-nothing");
-                } else if jump_just_pressed {
+                } else if user_input.jump_just_pressed {
                     self.jump_buffer_timer = self.jump_buffer_timer_duration;
                 }
             }
         }
 
-        if gp.left.pressed() {
+        if user_input.left_pressed {
             self.velocity += &Vector2::new(-self.acceleration, 0.0);
             self.is_facing_left = true;
-        } else if gp.right.pressed() {
+        } else if user_input.right_pressed {
             self.velocity += & Vector2::new(self.acceleration, 0.0);
             self.is_facing_left = false;
         } else {
@@ -87,7 +82,7 @@ impl Player {
         }
 
         self.velocity.clamp_x(-self.move_speed_max, self.move_speed_max);
-        let current_gravity = if self.movement_status == MovementStatus::IsFalling && !jump_pressed
+        let current_gravity = if self.movement_status == MovementStatus::IsFalling && !user_input.jump_pressed
             {
                 Vector2::new(0., self.gravity * 1.)
             } else if self.velocity.y.abs() < 4.0 {
@@ -106,7 +101,7 @@ impl Player {
             self.jump_buffer_timer -= 1;
         }
 
-        if gp.a.just_pressed() {
+        if user_input.a_just_pressed {
             match self.picked_item {
                 None => {
                     self.try_pick_item = true;
