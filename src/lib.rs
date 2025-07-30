@@ -169,7 +169,7 @@ pub enum ServerMsg {
     }
 }
 
-#[turbo::os::channel(program = "testchannel1", name = "main")] 
+#[turbo::os::channel(program = "testchannel2", name = "main")] 
 pub struct FluxGameStateChannel {
     level: Level,
     player1_id: String,
@@ -199,7 +199,7 @@ impl ChannelHandler for FluxGameStateChannel {
     } 
     
     fn on_open(&mut self, settings: &mut ChannelSettings) -> Result<(), std::io::Error> {
-        settings.set_interval(16);
+        settings.set_interval(32);
         Result::Ok(())
     }
     
