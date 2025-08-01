@@ -97,7 +97,7 @@ pub fn get_flux_line(rotation: f32, bounding_box: &BoundingBox) -> (Vector2, Vec
     (rotated_start, rotated_end)    
 }
 
-pub fn show_total_flux(total_flux: f32, screen_center: Vector2) {
+pub fn show_total_flux(total_flux: f32, screen_center: &Vector2) {
     let mut a = "Total flux: ".to_owned();
     a.push_str(&(total_flux.to_string()));
     text!(
