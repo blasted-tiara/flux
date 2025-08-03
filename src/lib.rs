@@ -44,6 +44,9 @@ use levels::*;
 mod background;
 use background::*;
 
+mod mainmenu;
+use mainmenu::*;
+
 use core::fmt;
 use std::ops;
 use std::f32::consts::PI;
@@ -66,6 +69,8 @@ struct GameState {
     last_processed_tick:usize,
     camera_center_x: f32,
     camera_center_y: f32, 
+    main_menu_options: Vec<MenuOption>,
+    game_flow_state: GameFlowState,
 }
 
 impl GameState {
@@ -82,13 +87,44 @@ impl GameState {
             last_processed_tick: 0,
             camera_center_x: SCREEN_WIDTH as f32 / 2.,
             camera_center_y: SCREEN_HEIGHT as f32 / 2.,
+            main_menu_options: get_main_menu_options(),
+            game_flow_state: GameFlowState::MainMenu,
         }
     }
     
     pub fn update(&mut self) {
-        let gamepad = gamepad::get(0);
         self.frames_per_server_update += 1;
 
+        match self.game_flow_state {
+            GameFlowState::MainMenu => {
+                self.handle_main_menu_flow();
+            },
+            GameFlowState::InGame => {
+                self.handle_in_game_flow();
+            },
+            GameFlowState::Credits => {}
+        }
+    }
+    
+    fn handle_main_menu_flow(&mut self) {
+        let selected_option = handle_input(&mut self.main_menu_options);
+        match selected_option {
+            Some(text) => {
+                if text == "Start" {
+                    self.game_flow_state = GameFlowState::InGame;
+                    return;
+                } else if text == "Credits" {
+                    self.game_flow_state = GameFlowState::Credits;
+                    return;
+                }
+            },
+            None => {},
+        }
+        draw_main_menu(&mut self.main_menu_options);
+    }
+    
+    fn handle_in_game_flow(&mut self) {
+        let gamepad = gamepad::get(0);
         let user_input = UserInput {
             tick: time::tick(),
             jump_just_pressed: gamepad.up.just_pressed() || gamepad.start.just_pressed(),
