@@ -32,7 +32,8 @@ pub fn construct_level1() -> Level {
     harvesters.push(Harvester::new(300., 30., PI / 2., &mut actor_manager));
     harvesters.push(Harvester::new(450., 30., PI, &mut actor_manager));
 
-    let player_start_position = Vector2 { x: 50., y: -50. };
+    let player1_start_position = Vector2 { x: 50., y: -50. };
+    let player2_start_position = Vector2 { x: 350., y: -50. };
     
     let mut background = Background::new(0xfdfeecff);
     background.layers.push(Layer {
@@ -61,7 +62,8 @@ pub fn construct_level1() -> Level {
         tilemap,
         harvesters,
         actor_manager,
-        player_start_position,
+        player1_start_position,
+        player2_start_position,
         background,
     }
 }

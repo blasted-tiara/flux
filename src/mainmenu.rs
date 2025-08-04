@@ -13,6 +13,19 @@ pub enum GameFlowState {
     MainMenu,
     Credits,
     InGame,
+    WaitingForPlayer2,
+}
+
+impl fmt::Display for GameFlowState {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let state_str = match self {
+            GameFlowState::MainMenu => "Main Menu",
+            GameFlowState::Credits => "Credits",
+            GameFlowState::InGame => "In Game",
+            GameFlowState::WaitingForPlayer2 => "Waiting for Player 2",
+        };
+        write!(f, "{}", state_str)
+    }
 }
 
 #[turbo::serialize]
@@ -46,7 +59,7 @@ impl MenuOption {
 pub fn get_main_menu_options() -> Vec<MenuOption> {
     let mut main_menu_options = Vec::new();
     
-    let x_coord = 40;
+    let x_coord = 50;
     let y_coord = 110;
     let option_height = 50;
     let options = vec!["Start", "Credits"];

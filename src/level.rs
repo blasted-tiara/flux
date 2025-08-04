@@ -5,7 +5,8 @@ pub struct Level {
     pub tilemap: TileMap,
     pub harvesters: Vec<Harvester>,
     pub actor_manager: ActorManager,
-    pub player_start_position: Vector2,
+    pub player1_start_position: Vector2,
+    pub player2_start_position: Vector2,
     pub background: Background,
 }
 
@@ -15,7 +16,8 @@ impl Level {
             tilemap: TileMap::new(&[], 0),
             harvesters: vec!(),
             actor_manager: ActorManager::new(),
-            player_start_position: Vector2::zero(),
+            player1_start_position: Vector2::zero(),
+            player2_start_position: Vector2::zero(),
             background: Background::new(0xffffffff),
         }
     } 

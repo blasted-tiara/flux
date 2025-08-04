@@ -2,6 +2,7 @@ use crate::*;
 
 #[turbo::serialize]
 pub struct Player {
+    pub id: String,
     pub actor: Actor,
     velocity: Vector2,
     is_facing_left: bool,
@@ -23,6 +24,7 @@ pub struct Player {
 impl Player {
     pub fn new(x: f32, y: f32) -> Self {
         Self {
+            id: String::new(),
             actor: Actor::new(Vector2::new(x, y),20., 35.),
             velocity: Vector2::new(0., 0.),
             move_speed_max: 5.0,
