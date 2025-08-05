@@ -65,7 +65,8 @@ struct GameState {
     local_player: Player,
     server_player_position: Vector2,
     unprocessed_local_inputs: VecDeque<UserInput>,
-    remote_player: Player,
+    remote_player_snapshots: VecDeque<Player>,
+    max_player_snapshots: usize,
     frames_per_server_update: u32,
     last_fpsu:u32,
     last_processed_tick:usize,
@@ -79,13 +80,13 @@ impl GameState {
     pub fn new() -> Self {
         let level = construct_level1();
         let p1_start = level.player1_start_position.clone();
-        let p2_start = level.player2_start_position.clone();
         Self {
             level,
             local_player: Player::new(p1_start.x, p1_start.y),
             server_player_position: Vector2::zero(),
             unprocessed_local_inputs: VecDeque::new(),
-            remote_player: Player::new(p2_start.x, p2_start.y),
+            remote_player_snapshots: VecDeque::new(),
+            max_player_snapshots: 5,
             frames_per_server_update: 0,
             last_fpsu: 0,
             last_processed_tick: 0,
@@ -179,44 +180,42 @@ impl GameState {
                             self.server_player_position = player1.actor.position.clone();
                             self.local_player = player1;
 
-                            while let Some(user_input) = self.unprocessed_local_inputs.pop_front() {
-                                match last_processed_tick_p1 {
-                                    Some(last_tick) => {
+                            match last_processed_tick_p1 {
+                                Some(last_tick) => {
+                                    while let Some(user_input) = self.unprocessed_local_inputs.pop_front() {
                                         self.last_processed_tick = last_tick;
                                         if user_input.tick > last_tick {
                                             self.unprocessed_local_inputs.push_front(user_input);
                                             break;
                                         }
-                                    },
-                                    None => {
-                                        self.unprocessed_local_inputs.push_front(user_input);
-                                        break;
-                                    },
-                                }
+                                    }
+                                },
+                                None => {},
                             }
-                            
-                            self.remote_player = player2;
+
+                            self.remote_player_snapshots.push_front(player2);
                         } else if self.local_player.id == player2.id {
                             self.server_player_position = player2.actor.position.clone();
                             self.local_player = player2;
 
-                            while let Some(user_input) = self.unprocessed_local_inputs.pop_front() {
-                                match last_processed_tick_p2 {
-                                    Some(last_tick) => {
+                            match last_processed_tick_p2 {
+                                Some(last_tick) => {
+                                    while let Some(user_input) = self.unprocessed_local_inputs.pop_front() {
                                         self.last_processed_tick = last_tick;
                                         if user_input.tick > last_tick {
                                             self.unprocessed_local_inputs.push_front(user_input);
                                             break;
                                         }
-                                    },
-                                    None => {
-                                        self.unprocessed_local_inputs.push_front(user_input);
-                                        break;
-                                    },
-                                }
-                            }
+                                    }
+                                },
+                                None => {},
+                        }
 
-                            self.remote_player = player1;
+                            self.remote_player_snapshots.push_front(player1);
+                        }
+                        
+                        if self.remote_player_snapshots.len() > self.max_player_snapshots {
+                            self.remote_player_snapshots.pop_back();
                         }
                         
                         // Replay unprocessed commands
@@ -261,7 +260,18 @@ impl GameState {
         }
         
         self.local_player.draw();
-        self.remote_player.draw();
+        let interpolated_remote_player = self.remote_player_snapshots.back().cloned();
+        let mut snapshot_positions: Vec<Vector2> = vec![];
+        for remote_player in &self.remote_player_snapshots {
+            snapshot_positions.push(remote_player.actor.position.clone());
+        }
+        match interpolated_remote_player {
+            Some(mut player) => {
+                player.actor.position = smooth_position(snapshot_positions);
+                player.draw();
+            },
+            None => {}
+        }
         self.server_player_position.draw(5);
         self.level.harvesters.iter().for_each(|h| { h.draw(&mut self.level.actor_manager); /* h.draw_bounding_box(); */ } );
         
@@ -278,6 +288,16 @@ impl GameState {
             audio::play("bg-music-nothing");
         }
     }
+}
+
+fn smooth_position(position_snapshots: Vec<Vector2>) -> Vector2 {
+    let n = position_snapshots.len();
+    let mut sum = Vector2::zero();
+    for snapshot in position_snapshots {
+        sum = sum + snapshot; 
+    }
+    
+    sum * (1. / n as f32)
 }
 
 fn show_debug_info(fpsu: u32, screen_center: &Vector2) {
@@ -340,7 +360,7 @@ pub enum ServerMsg {
     }
 }
 
-#[turbo::os::channel(program = "testchannel4", name = "main")] 
+#[turbo::os::channel(program = "testchannel5", name = "main")] 
 pub struct FluxGameStateChannel {
     level: Level,
     player1: Player,
@@ -400,7 +420,7 @@ impl ChannelHandler for FluxGameStateChannel {
             return Result::Ok(());
         }
         let mut last_processed_tick_p1: Option<usize> = None;
-                    
+        
         while !self.player1_inputs.is_empty() {
             let player1_input = self.player1_inputs.pop_front();
             
@@ -427,7 +447,7 @@ impl ChannelHandler for FluxGameStateChannel {
                 None => {}
             }
         }
-        
+
         return os::server::channel::broadcast(ServerMsg::GameState { harvesters: self.level.harvesters.clone(), player1: self.player1.clone(), last_processed_tick_p1, player2: self.player2.clone(), last_processed_tick_p2 });
     }
 
