@@ -78,7 +78,7 @@ struct GameState {
 
 impl GameState {
     pub fn new() -> Self {
-        let level = construct_level1();
+        let level = construct_level0();
         let p1_start = level.player1_start_position.clone();
         Self {
             level,
@@ -273,7 +273,7 @@ impl GameState {
             },
             None => {}
         }
-        self.server_player_position.draw(5);
+        //self.server_player_position.draw(5);
         self.level.harvesters.iter().for_each(|h| { h.draw(&mut self.level.actor_manager); /* h.draw_bounding_box(); */ } );
         
         let mut total_flux = 0.;
@@ -379,7 +379,7 @@ impl ChannelHandler for FluxGameStateChannel {
     type Send = ServerMsg; // outgoing to client
                              //
     fn new() -> Self { 
-        let level = construct_level1();
+        let level = construct_level0();
         let player1_start_position = level.player1_start_position.clone();
         let player2_start_position = level.player2_start_position.clone();
         Self {

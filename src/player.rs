@@ -177,13 +177,14 @@ impl Player {
                 let item_option = actor_manager.get_actor_mut(actor_id);
                 match item_option {
                     Some(actor) => {
-                        let backpack_offset = 15.;
+                        let backpack_offset_x = 16.;
+                        let backpack_offset_y = 9.;
                         if self.is_facing_left {
-                            actor.position.x = self.actor.position.x + backpack_offset;
+                            actor.position.x = self.actor.position.x + backpack_offset_x;
                         } else {
-                            actor.position.x = self.actor.position.x - backpack_offset;
+                            actor.position.x = self.actor.position.x - backpack_offset_x;
                         }
-                        actor.position.y = self.actor.position.y;
+                        actor.position.y = self.actor.position.y - backpack_offset_y;
                     }
                     None => {},
                 }
@@ -197,6 +198,21 @@ impl Player {
     }
     
     pub fn draw(&self) {
+        let x_offset_holder = if self.is_facing_left { 17. } else { 19. };
+        let y_offset_holder = 18.;
+        
+        match self.picked_item {
+            Some(_) => {
+                sprite!(
+                    "energy_box_holder",
+                    x = self.actor.position.x - x_offset_holder,
+                    y = self.actor.position.y - y_offset_holder,
+                    flip_x = self.is_facing_left,
+                )
+            },
+            None => {}
+        }
+
         let BoundingBox {top, right, bottom, left} = self.actor.get_bound();
         if self.movement_status == MovementStatus::IsLanded && self.velocity.x != 0. {
             let x_offset = if self.is_facing_left { 5 } else { 10 };

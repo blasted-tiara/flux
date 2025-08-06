@@ -1,6 +1,8 @@
 use crate::*;
 
 const GRAVITY: f32 = 1.6;
+const MAX_FLUX: f32 = 200.;
+const FLUX_LEVELS: u32 = 3;
 
 #[turbo::serialize]
 pub struct Harvester {
@@ -25,7 +27,6 @@ impl Harvester {
     pub fn actor_move(&mut self, tiles: &Vec<&Solid>, actor_manager: &mut ActorManager) {
         let actor_option = actor_manager.get_actor_mut(self.actor);
         match actor_option {
-            None => return,
             Some(actor) => {
                 if actor.is_child { return };
                 let current_velocity_x = self.velocity.x;
@@ -43,7 +44,8 @@ impl Harvester {
                     }
                 };
                 actor.move_y(tiles, current_velocity_y, on_y_collision);
-            }
+            },
+            None => return,
         }
     }
     
@@ -68,31 +70,51 @@ impl Harvester {
                 
                 self.flux_field = calculate_line_flux(&start, &end, 6, flux_cores);
                 self.flux = (end - start).get_normal_vector().normalize().dot(&self.flux_field);
-                (end - start).get_normal_vector().normalize().draw_at_point(&actor.position, self.flux / 10.);
+                //(end - start).get_normal_vector().normalize().draw_at_point(&actor.position, self.flux / 10.);
                 self.flux
             },
             None => { 0. }
         }
     }
     
-    
-    
     pub fn draw(&self, actor_manager: &ActorManager) {
         let actor_option = actor_manager.get_actor(self.actor);
         match actor_option {
-            None => return,
             Some(actor) => {
-                let x_ofsset = 9.;
-                let y_ofsset = 9.;
+                let x_offset = 9.;
+                let y_offset = 9.;
+
+                let mut sprite = "energybox00";
+                match self.flux {
+                    50.0..=100. => {
+                        sprite = "energybox01"
+                    },
+                    100.0..=150. => {
+                        sprite = "energybox02"
+                    },
+                    150.0..=200. => {
+                        sprite = "energybox03"
+                    },
+                    200.0..=250. => {
+                        sprite = "energybox04"
+                    },
+                    250.0..=300. => {
+                        sprite = "energybox05"
+                    },
+                    300.0.. => {
+                        sprite = "energybox06"
+                    },
+                    _ => {}
+                }
 
                 sprite!(
-                    "harvester",
-                    x = actor.position.x - x_ofsset,
-                    y = actor.position.y - y_ofsset,
+                    sprite,
+                    x = actor.position.x - x_offset,
+                    y = actor.position.y - y_offset,
                     rotation = self.rotation.to_degrees(),
-                    scale = 0.5, 
                 );
-            }
+            },
+            None => return,
         }
     }
     
