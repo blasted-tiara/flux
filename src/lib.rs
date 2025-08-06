@@ -86,7 +86,7 @@ impl GameState {
             server_player_position: Vector2::zero(),
             unprocessed_local_inputs: VecDeque::new(),
             remote_player_snapshots: VecDeque::new(),
-            max_player_snapshots: 5,
+            max_player_snapshots: 3,
             frames_per_server_update: 0,
             last_fpsu: 0,
             last_processed_tick: 0,
@@ -174,8 +174,9 @@ impl GameState {
         if let Some(conn) = FluxGameStateChannel::subscribe("default") { 
             while let Ok(msg) = conn.recv() { 
                 match msg {
-                    ServerMsg::GameState { harvesters, player1, last_processed_tick_p1, player2, last_processed_tick_p2 } => {
+                    ServerMsg::GameState { harvesters, actor_manager, player1, last_processed_tick_p1, player2, last_processed_tick_p2 } => {
                         self.level.harvesters = harvesters;
+                        self.level.actor_manager = actor_manager;
                         if self.local_player.id == player1.id  {
                             self.server_player_position = player1.actor.position.clone();
                             self.local_player = player1;
@@ -357,6 +358,7 @@ pub enum ServerMsg {
         player2: Player,
         last_processed_tick_p2: Option<usize>,
         harvesters: Vec<Harvester>,
+        actor_manager: ActorManager,
     }
 }
 
@@ -420,35 +422,31 @@ impl ChannelHandler for FluxGameStateChannel {
             return Result::Ok(());
         }
         let mut last_processed_tick_p1: Option<usize> = None;
-        
-        while !self.player1_inputs.is_empty() {
-            let player1_input = self.player1_inputs.pop_front();
-            
-            match player1_input {
-                Some(input) => {
-                    last_processed_tick_p1 = Some(input.tick);
-                    simulate_frame(&mut self.player1, &mut self.level, &input);
-                },
-                None => {}
-            }
-        }
-
         let mut last_processed_tick_p2: Option<usize> = None;
-
-        // NOTE: Extract this into a function
-        while !self.player2_inputs.is_empty() {
+        
+        while !self.player1_inputs.is_empty() || !self.player2_inputs.is_empty() {
+            let player1_input = self.player1_inputs.pop_front();
             let player2_input = self.player2_inputs.pop_front();
             
-            match player2_input {
-                Some(input) => {
-                    last_processed_tick_p2 = Some(input.tick);
-                    simulate_frame(&mut self.player2, &mut self.level, &input);
+            match (player1_input, player2_input) {
+                (Some(input1), Some(input2)) => {
+                    last_processed_tick_p1 = Some(input1.tick);
+                    last_processed_tick_p2 = Some(input2.tick);
+                    simulate_server_frame(&mut self.player1, &input1, &mut self.player2, &input2, &mut self.level);
                 },
-                None => {}
+                (Some(input1), None) => {
+                    last_processed_tick_p1 = Some(input1.tick);
+                    simulate_server_frame(&mut self.player1, &input1, &mut self.player2, &UserInput::new(), &mut self.level);
+                },
+                (None, Some(input2)) => {
+                    last_processed_tick_p2 = Some(input2.tick);
+                    simulate_server_frame(&mut self.player1, &UserInput::new(), &mut self.player2, &input2, &mut self.level);
+                },
+                (None, None) => {}
             }
         }
 
-        return os::server::channel::broadcast(ServerMsg::GameState { harvesters: self.level.harvesters.clone(), player1: self.player1.clone(), last_processed_tick_p1, player2: self.player2.clone(), last_processed_tick_p2 });
+        return os::server::channel::broadcast(ServerMsg::GameState { harvesters: self.level.harvesters.clone(), actor_manager: self.level.actor_manager.clone(), player1: self.player1.clone(), last_processed_tick_p1, player2: self.player2.clone(), last_processed_tick_p2 });
     }
 
     fn on_data(&mut self, user_id: &str, data: Self::Recv) -> Result<(), std::io::Error> { 
@@ -512,6 +510,59 @@ fn simulate_frame(player: &mut Player, level: &mut Level, input: &UserInput) {
     player.pick_item(&mut level.actor_manager);
     // Move player
     player.actor_move(&solids, &mut level.actor_manager);
+
+    // Move harvesters
+    level.harvesters.iter_mut().for_each(|h| h.actor_move(&solids, &mut level.actor_manager));
+
+    let mut total_flux = 0.;
+    for harvester in &mut level.harvesters {
+        total_flux += harvester.calculate_flux(&mut level.actor_manager, &level.tilemap.flux_cores);
+    }
+    
+    for door in &mut level.tilemap.doors {
+        if door.id == 0 {
+            door.open = total_flux >= FLUX_THRESHOLD;
+        }
+    }
+}
+
+fn simulate_server_frame(player1: &mut Player, input1: &UserInput, player2: &mut Player, input2: &UserInput, level: &mut Level) {
+    let Level {
+        tilemap,
+        harvesters,
+        actor_manager,
+        player1_start_position: _,
+        player2_start_position: _,
+        background: _,
+    } = level;
+
+    let mut solids: Vec<&Solid> = vec![];
+    for tile in &tilemap.tiles {
+        solids.push(&tile.solid);        
+    }
+    for flux_core in &tilemap.flux_cores {
+        solids.push(&flux_core.solid);
+    }
+    // NOTE: Cloning because usually a level won't contain more than a couple of doors.
+    for door in &tilemap.doors {
+        if !door.open {
+            solids.push(&door.solid);
+        }
+    }
+        
+    player1.handle_input(actor_manager, input1);
+    player2.handle_input(actor_manager, input2);
+
+    // Add gravity to 
+    for harvester in harvesters.iter_mut() {
+        harvester.apply_gravity(&mut level.actor_manager);
+    }
+
+    player1.pick_item(&mut level.actor_manager);
+    player2.pick_item(&mut level.actor_manager);
+    // Move player
+    player1.actor_move(&solids, &mut level.actor_manager);
+    player2.actor_move(&solids, &mut level.actor_manager);
 
     // Move harvesters
     level.harvesters.iter_mut().for_each(|h| h.actor_move(&solids, &mut level.actor_manager));
