@@ -28,9 +28,13 @@ impl TileMap {
                 } else if data_value == 11 {
                     doors.push(Door::new(0, (i as f32 + 0.5) * tile_size as f32, (j as f32 + 1.5) * tile_size as f32, tile_size as f32, tile_size as f32 * 3., false));
                 } else if data_value == 2 {
-                    flux_cores.push(FluxCore::new(2000., Vector2 { x: (i as f32 + 0.5) * tile_size as f32, y: (j as f32 + 0.5) * tile_size as f32 }, tile_size as f32, tile_size as f32));
+                    flux_cores.push(FluxCore::new_radial_core(2000., Vector2 { x: (i as f32 + 0.5) * tile_size as f32, y: (j as f32 + 0.5) * tile_size as f32 }, tile_size as f32, tile_size as f32));
                 } else if data_value == 3 {
-                    flux_cores.push(FluxCore::new(-2000. , Vector2 { x: (i as f32 + 0.5) * tile_size as f32, y: (j as f32 + 0.5) * tile_size as f32 }, tile_size as f32, tile_size as f32));
+                    flux_cores.push(FluxCore::new_radial_core(-2000. , Vector2 { x: (i as f32 + 0.5) * tile_size as f32, y: (j as f32 + 0.5) * tile_size as f32 }, tile_size as f32, tile_size as f32));
+                } else if data_value == 12 {
+                    flux_cores.push(FluxCore::new_rotational_core(2000., Vector2 { x: (i as f32 + 0.5) * tile_size as f32, y: (j as f32 + 0.5) * tile_size as f32 }, tile_size as f32, tile_size as f32));
+                } else if data_value == 13 {
+                    flux_cores.push(FluxCore::new_rotational_core(-2000. , Vector2 { x: (i as f32 + 0.5) * tile_size as f32, y: (j as f32 + 0.5) * tile_size as f32 }, tile_size as f32, tile_size as f32));
                 }
             }
         }

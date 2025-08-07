@@ -247,8 +247,22 @@ impl GameState {
         let bounding_box = &BoundingBox { top: -10., right: 700., bottom: 300., left: -10. };
         if 0 == time::tick() % 3 {
             for flux_core in &self.level.tilemap.flux_cores {
-                if flux_core.strength > 0. {
-                    self.particle_manager.generate_box_of_particles(1 as u32, &flux_core.solid.get_bound());
+                
+                match flux_core.core_type {
+                    FluxCoreType::Radial => {
+                        if flux_core.get_strength() > 0. {
+                            self.particle_manager.generate_box_of_particles(1 as u32, &flux_core.solid.get_bound());
+                        }
+                    },
+                    FluxCoreType::Rotational => {
+                        let core_bound = &flux_core.solid.get_bound();
+                        let offset = 60.;
+                        self.particle_manager.generate_box_of_particles(1 as u32, &BoundingBox {
+                            top: core_bound.top - offset,
+                            right: core_bound.right + offset,
+                            bottom: core_bound.bottom + offset,
+                            left: core_bound.left - offset });
+                    },
                 }
             }
         }

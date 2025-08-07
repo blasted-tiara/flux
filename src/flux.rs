@@ -2,14 +2,40 @@ use crate::*;
 
 #[turbo::serialize]
 pub struct FluxCore {
-    pub strength: f32,
+    amplitude: f32,
+    pub time_offset: f32,
+    pub period_s: f32,
+    pub core_type: FluxCoreType,
     pub solid: Solid,
 }
 
+#[turbo::serialize]
+pub enum FluxCoreType {
+    Radial,
+    Rotational,
+}
+
 impl FluxCore {
-    pub fn new(strength: f32, position: Vector2, width: f32, height: f32) -> Self {
+    pub fn new_radial_core(amplitude: f32, position: Vector2, width: f32, height: f32) -> Self {
         Self {
-            strength,
+            amplitude,
+            core_type: FluxCoreType::Radial,
+            time_offset: 0.,
+            period_s: 0.,
+            solid: Solid {
+                position,
+                width,
+                height,
+            }
+        }
+    }
+    
+    pub fn new_rotational_core(amplitude: f32, position: Vector2, width: f32, height: f32) -> Self {
+        Self {
+            amplitude,
+            core_type: FluxCoreType::Rotational,
+            time_offset: 0.,
+            period_s: 0.15,
             solid: Solid {
                 position,
                 width,
@@ -22,13 +48,17 @@ impl FluxCore {
         let x = (self.solid.position.x - self.solid.width / 2.) as i32;
         let y = (self.solid.position.y - self.solid.height / 2.) as i32;
 
-        if self.strength > 0. {
+        if self.amplitude > 0. {
             sprite!("flux_source", x = x, y = y, scale = SPRITE_SCALE);
-        } else if self.strength < 0. {
+        } else if self.amplitude < 0. {
             sprite!("flux_sink", x = x, y = y, scale = SPRITE_SCALE);
         } else {
             sprite!("dirt", x = x, y = y, scale = SPRITE_SCALE);
         }
+    }
+    
+    pub fn get_strength(&self) -> f32 {
+        self.amplitude * f32::cos(self.time_offset + self.period_s * (time::tick() as f32 / 60.) * PI * 2.)
     }
 }
 
@@ -63,7 +93,14 @@ pub fn net_flux_field_at_point(point: &Vector2, flux_cores: &Vec<FluxCore>) -> V
 
 fn flux_field_at_point(point: &Vector2, flux_core: &FluxCore) -> Vector2 {
     let r = point - &flux_core.solid.position;
-    r * (flux_core.strength / (2. * PI * r.length_squared()))
+    match flux_core.core_type {
+        FluxCoreType::Radial => {
+            r * (flux_core.get_strength() / (2. * PI * r.length_squared()))
+        },
+        FluxCoreType::Rotational => {
+            r.rotate(PI / 2.) * (flux_core.get_strength() / (2. * PI * r.length_squared()))
+        },
+    }
 }
 
 pub fn line_to_segments(start: &Vector2, end: &Vector2, segment_count: u32) -> Vec<Vector2> {
