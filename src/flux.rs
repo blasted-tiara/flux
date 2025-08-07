@@ -2,7 +2,7 @@ use crate::*;
 
 #[turbo::serialize]
 pub struct Flux {
-    strength: f32,
+    pub strength: f32,
     pub solid: Solid,
 }
 
