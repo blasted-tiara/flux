@@ -1,12 +1,12 @@
 use crate::*;
 
 #[turbo::serialize]
-pub struct Flux {
+pub struct FluxCore {
     pub strength: f32,
     pub solid: Solid,
 }
 
-impl Flux {
+impl FluxCore {
     pub fn new(strength: f32, position: Vector2, width: f32, height: f32) -> Self {
         Self {
             strength,
@@ -32,7 +32,7 @@ impl Flux {
     }
 }
 
-pub fn calculate_line_flux(start: &Vector2, end: &Vector2, segment_count: u32, flux_cores: &Vec<Flux>) -> Vector2 {
+pub fn calculate_line_flux(start: &Vector2, end: &Vector2, segment_count: u32, flux_cores: &Vec<FluxCore>) -> Vector2 {
     let segments = line_to_segments(start, end, segment_count);
     let mut net_flux = Vector2::zero();
     
@@ -52,7 +52,7 @@ pub fn calculate_line_flux(start: &Vector2, end: &Vector2, segment_count: u32, f
     net_flux
 }
 
-pub fn net_flux_field_at_point(point: &Vector2, flux_cores: &Vec<Flux>) -> Vector2 {
+pub fn net_flux_field_at_point(point: &Vector2, flux_cores: &Vec<FluxCore>) -> Vector2 {
     let mut total_flux = Vector2::zero();
     for flux_core in flux_cores  {
         total_flux += flux_field_at_point(point, &flux_core)     
@@ -61,7 +61,7 @@ pub fn net_flux_field_at_point(point: &Vector2, flux_cores: &Vec<Flux>) -> Vecto
     total_flux
 }
 
-fn flux_field_at_point(point: &Vector2, flux_core: &Flux) -> Vector2 {
+fn flux_field_at_point(point: &Vector2, flux_core: &FluxCore) -> Vector2 {
     let r = point - &flux_core.solid.position;
     r * (flux_core.strength / (2. * PI * r.length_squared()))
 }
@@ -79,7 +79,7 @@ pub fn line_to_segments(start: &Vector2, end: &Vector2, segment_count: u32) -> V
     segments
 }
 
-pub fn calculate_line_segment_flux(start: &Vector2, end: &Vector2, flux_cores: &Vec<Flux>) -> Vector2 {
+pub fn calculate_line_segment_flux(start: &Vector2, end: &Vector2, flux_cores: &Vec<FluxCore>) -> Vector2 {
     let mid_point = start + ((end - start) * 0.5);
     let delta = (end - start).length();
     

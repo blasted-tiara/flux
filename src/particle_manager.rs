@@ -2,7 +2,7 @@ use crate::*;
 
 const MAX_PARTICLES: u32 = 1000;
 const FLUX_FIELD_CONSTANT: f32 = 0.15;
-const MAX_PARTICLE_SPEED: f32 = 2.6;
+const MAX_PARTICLE_SPEED: f32 = 2.5;
 const MAX_PARTICLE_TAIL_COUNT: u32 = 9;
 
 #[turbo::serialize]
@@ -17,7 +17,7 @@ impl ParticleManager {
         }
     }
     
-    pub fn update(&mut self, flux_cores: &Vec<Flux>) {
+    pub fn update(&mut self, flux_cores: &Vec<FluxCore>) {
         let mut dead_particle_indices: Vec<usize> = Vec::new();
         for (idx, particle) in &mut self.particle_pool.iter_mut().enumerate() {
             particle.update(flux_cores);
@@ -86,7 +86,7 @@ impl Particle {
         }
     }
     
-    fn update(&mut self, flux_cores: &Vec<Flux>) {
+    fn update(&mut self, flux_cores: &Vec<FluxCore>) {
         if !self.is_alive {
             // TODO: Particle should disappear gracefuly
             return;

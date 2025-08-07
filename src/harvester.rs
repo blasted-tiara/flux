@@ -61,7 +61,7 @@ impl Harvester {
         }
     }
     
-    pub fn calculate_flux(&mut self, actor_manager: &mut ActorManager, flux_cores: &Vec<Flux>) -> f32 {
+    pub fn calculate_flux(&mut self, actor_manager: &mut ActorManager, flux_cores: &Vec<FluxCore>) -> f32 {
         let actor = actor_manager.get_actor(self.actor);
         match actor {
             Some(actor) => {
