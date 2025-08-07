@@ -1,4 +1,5 @@
 use turbo::audio::play;
+use turbo::time::tick;
 use turbo::*;
 use std::collections::VecDeque;
 use std::io::{Error, ErrorKind};
@@ -11,6 +12,9 @@ use actor::*;
 
 mod harvester;
 use harvester::*;
+
+mod particle_manager;
+use particle_manager::*;
 
 mod player;
 use player::*;
@@ -49,7 +53,7 @@ mod mainmenu;
 use mainmenu::*;
 
 use core::fmt;
-use std::ops;
+use std::ops::{self, Bound};
 use std::f32::consts::PI;
 
 use camera::set_xy;
@@ -74,6 +78,7 @@ struct GameState {
     camera_center_y: f32, 
     main_menu_options: Vec<MenuOption>,
     game_flow_state: GameFlowState,
+    particle_manager: ParticleManager,
 }
 
 impl GameState {
@@ -94,6 +99,7 @@ impl GameState {
             camera_center_y: SCREEN_HEIGHT as f32 / 2.,
             main_menu_options: get_main_menu_options(),
             game_flow_state: GameFlowState::MainMenu,
+            particle_manager: ParticleManager::new(),
         }
     }
     
@@ -238,16 +244,30 @@ impl GameState {
         self.unprocessed_local_inputs.push_back(user_input.clone());
         simulate_frame(&mut self.local_player, &mut self.level, &user_input);
 
+        let bounding_box = &BoundingBox { top: -10., right: 700., bottom: 300., left: -10. };
+        if 0 == time::tick() % 3 {
+            for flux_core in &self.level.tilemap.flux_cores {
+                if flux_core.strength > 0. {
+                    self.particle_manager.generate_box_of_particles(1 as u32, &flux_core.solid.get_bound());
+                }
+            }
+        }
+        self.particle_manager.generate_box_of_particles(0, bounding_box);
+        self.particle_manager.update(&self.level.tilemap.flux_cores);
+
         let camera_position = self.level.tilemap.lock_viewport_to_tilemap(&Vector2::new(self.local_player.actor.position.x, self.local_player.actor.position.y), &Vector2::new(SCREEN_WIDTH as f32, SCREEN_HEIGHT as f32));
         let new_camera_position_x = lerp(self.camera_center_x as f32, camera_position.x, 0.1);
         let new_camera_position_y = lerp(self.camera_center_y as f32, camera_position.y, 0.1);
         self.level.background.draw(Vector2{ x: new_camera_position_x, y: new_camera_position_y });
         
+        //bounding_box.draw_bounding_box();
         self.camera_center_x = new_camera_position_x;
         self.camera_center_y = new_camera_position_y;
         set_xy(self.camera_center_x, self.camera_center_y);
 
-        self.level.tilemap.draw_flux_field();
+        self.particle_manager.draw();
+
+        //self.level.tilemap.draw_flux_field();
         for t in &self.level.tilemap.tiles {
             t.draw();
         }
@@ -362,7 +382,7 @@ pub enum ServerMsg {
     }
 }
 
-#[turbo::os::channel(program = "testchannel5", name = "main")] 
+#[turbo::os::channel(program = "testchannel4", name = "main")] 
 pub struct FluxGameStateChannel {
     level: Level,
     player1: Player,
