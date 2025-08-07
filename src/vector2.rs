@@ -22,12 +22,27 @@ impl Vector2 {
         }
     }
     
+    pub fn unit() -> Self {
+        Self {
+            x: 1.0,
+            y: 0.0,
+        }
+    }
+    
     pub fn clamp_x(&mut self, floor: f32, ceil: f32) {
         self.x = self.x.clamp(floor, ceil);
     }
     
     pub fn clamp_y(&mut self, floor: f32, ceil: f32) {
         self.y = self.y.clamp(floor, ceil);
+    }
+    
+    pub fn clamp_length(&mut self, ceil: f32) -> Vector2 {
+        if self.length() > ceil {
+            return self.normalize() * ceil;
+        } else {
+            *self
+        }
     }
     
     pub fn rotate_point(&self, center: Vector2, amount: f32) -> Vector2 {
@@ -97,6 +112,13 @@ impl Vector2 {
 
     pub fn lerp(&self, rhs: &Vector2, alpha: f32) -> Vector2 {
         Vector2::new(lerp(self.x, rhs.x, alpha), lerp(self.y, rhs.y, alpha))
+    }
+    
+    pub fn random() -> Vector2 {
+        let unit = Vector2::unit();
+        let angle = random::between(0., 2. * PI);
+        
+        unit.rotate(angle)
     }
  }
 
