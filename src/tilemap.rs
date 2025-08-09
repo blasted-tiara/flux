@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::*;
 
 use sys::time::tick;
@@ -12,29 +14,68 @@ pub struct TileMap {
 }
 
 impl TileMap {
-    pub fn new(data: &[&[u8]], tile_size: u32) -> Self {
+    pub fn new(
+        terrain_tilemap: &[u8],
+        flux_cores_tilemap: &[u8],
+        flux_cores_properties: &HashMap<u8, FluxCoreData>,
+        doors_tilemap: &[u8],
+        width: usize,
+        height: usize,
+        tile_size: u32) -> Self
+    {
         let mut tiles: Vec<Tile> = Vec::new();
+        for j in 0..height {
+            for i in 0..width {
+                let tile_id = terrain_tilemap[j * width + i] as usize;
+                if tile_id != 0 {
+                    tiles.push(
+                        Tile::new(
+                            Vector2 {
+                                x: (i as f32 + 0.5) * tile_size as f32,
+                                y: (j as f32 + 0.5) * tile_size as f32
+                            },
+                            tile_size as f32,
+                            tile_size as f32,
+                            tile_id
+                        )
+                    );
+                }
+            }
+        }
+        
+        log!("Tiles on level: {}", tiles.len());
+
         let mut flux_cores: Vec<FluxCore> = Vec::new();
+        for j in 0..height {
+            for i in 0..width {
+                let flux_core_id = flux_cores_tilemap[j * width + i];
+                match flux_cores_properties.get(&flux_core_id) {
+                    Some(core_data) => {
+                        flux_cores.push(FluxCore {
+                            amplitude: core_data.amplitude,
+                            time_offset: core_data.time_offset,
+                            period_s: core_data.time_period,
+                            core_type: core_data.core_type.clone(),
+                            solid: Solid {
+                                position: Vector2 {
+                                    x: (i as f32 + 0.5) * tile_size as f32,
+                                    y: (j as f32 + 0.5) * tile_size as f32
+                                },
+                                width: tile_size as f32,
+                                height: tile_size as f32,
+                            }
+                        });
+                    },
+                    None => {}
+                }
+            }
+        }
+
         let mut doors: Vec<Door> = Vec::new();
-
-        let width = data[0].len() as f32 * tile_size as f32;
-        let height = data.len() as f32 * tile_size as f32;
-
-        for j in 0..data.len() {
-            for i in 0..data[j].len() {
-                let data_value = data[j][i];
-                if data_value == 1 {
-                    tiles.push(Tile::new(Vector2 { x: (i as f32 + 0.5) * tile_size as f32, y: (j as f32 + 0.5) * tile_size as f32 }, tile_size as f32, tile_size as f32));
-                } else if data_value == 11 {
+        for j in 0..height {
+            for i in 0..width {
+                if doors_tilemap[j * width + i] == 1 {
                     doors.push(Door::new(0, (i as f32 + 0.5) * tile_size as f32, (j as f32 + 1.5) * tile_size as f32, tile_size as f32, tile_size as f32 * 3., false));
-                } else if data_value == 2 {
-                    flux_cores.push(FluxCore::new_radial_core(2000., Vector2 { x: (i as f32 + 0.5) * tile_size as f32, y: (j as f32 + 0.5) * tile_size as f32 }, tile_size as f32, tile_size as f32));
-                } else if data_value == 3 {
-                    flux_cores.push(FluxCore::new_radial_core(-2000. , Vector2 { x: (i as f32 + 0.5) * tile_size as f32, y: (j as f32 + 0.5) * tile_size as f32 }, tile_size as f32, tile_size as f32));
-                } else if data_value == 12 {
-                    flux_cores.push(FluxCore::new_rotational_core(2000., Vector2 { x: (i as f32 + 0.5) * tile_size as f32, y: (j as f32 + 0.5) * tile_size as f32 }, tile_size as f32, tile_size as f32));
-                } else if data_value == 13 {
-                    flux_cores.push(FluxCore::new_rotational_core(-2000. , Vector2 { x: (i as f32 + 0.5) * tile_size as f32, y: (j as f32 + 0.5) * tile_size as f32 }, tile_size as f32, tile_size as f32));
                 }
             }
         }
@@ -43,8 +84,8 @@ impl TileMap {
             tiles,
             flux_cores,
             doors,
-            width,
-            height,
+            width: width as f32 * tile_size as f32,
+            height: height as f32 * tile_size as f32,
         }
     }
     

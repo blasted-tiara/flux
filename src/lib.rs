@@ -1,5 +1,3 @@
-use turbo::audio::play;
-use turbo::time::tick;
 use turbo::*;
 use std::collections::VecDeque;
 use std::io::{Error, ErrorKind};
@@ -53,7 +51,7 @@ mod mainmenu;
 use mainmenu::*;
 
 use core::fmt;
-use std::ops::{self, Bound};
+use std::ops::{self};
 use std::f32::consts::PI;
 
 use camera::set_xy;
@@ -61,7 +59,6 @@ use camera::set_xy;
 const SCREEN_WIDTH: i32 = 512;
 const SCREEN_HEIGHT: i32 = 288;
 const FLUX_THRESHOLD: f32 = 400.;
-pub const SPRITE_SCALE: f32 = 0.25;
  
 #[turbo::game]
 struct GameState {
@@ -239,7 +236,7 @@ impl GameState {
 
             // Send gamepad state to the server
             let _ = conn.send(&ClientMsg::UserInput { user_input: user_input.clone() });
-        } 
+        }
         
         self.unprocessed_local_inputs.push_back(user_input.clone());
         simulate_frame(&mut self.local_player, &mut self.level, &user_input);
@@ -266,6 +263,7 @@ impl GameState {
                 }
             }
         }
+
         self.particle_manager.generate_box_of_particles(0, bounding_box);
         self.particle_manager.update(&self.level.tilemap.flux_cores);
 
@@ -611,5 +609,15 @@ fn simulate_server_frame(player1: &mut Player, input1: &UserInput, player2: &mut
         if door.id == 0 {
             door.open = total_flux >= FLUX_THRESHOLD;
         }
+    }
+}
+
+pub fn clamp(value: f32, min: f32, max: f32) -> f32 {
+    if value < min {
+        value
+    } else if value > max {
+        max
+    } else {
+        value
     }
 }

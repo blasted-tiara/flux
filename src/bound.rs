@@ -4,6 +4,7 @@ pub trait Bounded {
     fn get_bound(&self) -> BoundingBox;
 }
 
+#[turbo::serialize]
 pub struct BoundingBox {
     pub top: f32,
     pub right: f32,
@@ -25,6 +26,10 @@ impl BoundingBox {
             self.bottom <= other.top ||
             other.bottom <= self.top
         )
+    }
+    
+    pub fn contains(&self, point: Vector2) -> bool {
+        point.x < self.right && point.x > self.left
     }
     
     pub fn draw_bounding_box(&self) {

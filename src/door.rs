@@ -25,9 +25,9 @@ impl Door {
         let y = (self.solid.position.y - self.solid.height / 2.) as i32;
 
         if self.open {
-            sprite!("door_open", x = x, y = y);
-        } else {
             sprite!("door_closed", x = x, y = y);
+        } else {
+            sprite!("door_1", x = x, y = y);
         }
     }
 

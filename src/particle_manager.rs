@@ -1,6 +1,6 @@
 use crate::*;
 
-const MAX_PARTICLES: u32 = 1000;
+const MAX_PARTICLES: u32 = 200;
 const FLUX_FIELD_CONSTANT: f32 = 0.15;
 const MAX_PARTICLE_SPEED: f32 = 2.5;
 const MAX_PARTICLE_TAIL_COUNT: u32 = 9;
@@ -141,7 +141,7 @@ impl Particle {
 }
 
 pub fn random_color(alpha: f32) -> u32 {
-    let r = random::between(0.2, 0.4) + if (tick() % 500) > 250 { 0.0 } else { 0.4 };
+    let r = random::between(0.2, 0.4) + if (time::tick() % 500) > 250 { 0.0 } else { 0.4 };
     let g = random::between(0.6, 1.0);
     let b = random::between(0.7, 1.0);
     color_rgb(r, g, b, alpha)

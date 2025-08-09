@@ -2,7 +2,7 @@ use crate::*;
 
 #[turbo::serialize]
 pub struct FluxCore {
-    amplitude: f32,
+    pub amplitude: f32,
     pub time_offset: f32,
     pub period_s: f32,
     pub core_type: FluxCoreType,
@@ -49,11 +49,9 @@ impl FluxCore {
         let y = (self.solid.position.y - self.solid.height / 2.) as i32;
 
         if self.amplitude > 0. {
-            sprite!("flux_source", x = x, y = y, scale = SPRITE_SCALE);
-        } else if self.amplitude < 0. {
-            sprite!("flux_sink", x = x, y = y, scale = SPRITE_SCALE);
-        } else {
-            sprite!("dirt", x = x, y = y, scale = SPRITE_SCALE);
+            sprite!("flux_source", x = x, y = y);
+        } else if self.amplitude <= 0. {
+            sprite!("flux_sink", x = x, y = y);
         }
     }
     
