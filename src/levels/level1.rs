@@ -2,14 +2,7 @@ use std::collections::HashMap;
 
 use crate::*;
 
-pub struct FluxCoreData {
-    pub amplitude: f32,
-    pub core_type: FluxCoreType,
-    pub time_offset: f32,
-    pub time_period: f32,
-}
-
-pub fn construct_level0() -> Level {
+pub fn construct_level_1() -> Level {
     let height = 18;
     let width = 50;
     let tile_size = 16;

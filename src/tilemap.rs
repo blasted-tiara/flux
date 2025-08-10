@@ -75,7 +75,16 @@ impl TileMap {
         for j in 0..height {
             for i in 0..width {
                 if doors_tilemap[j * width + i] == 1 {
-                    doors.push(Door::new(0, (i as f32 + 0.5) * tile_size as f32, (j as f32 + 1.5) * tile_size as f32, tile_size as f32, tile_size as f32 * 3., false));
+                    doors.push(
+                        Door::new(
+                            0,
+                            (i as f32 + 0.5) * tile_size as f32,
+                            (j as f32 - 0.5) * tile_size as f32,
+                            tile_size as f32 / 1.3,
+                            tile_size as f32 * 3.,
+                            false
+                        )
+                    );
                 }
             }
         }
@@ -108,5 +117,9 @@ impl TileMap {
                 }
             }
         }
+    }
+    
+    pub fn is_inside(&self, position: &Vector2) -> bool {
+        position.x > 0. && position.x < self.width && position.y > 0. && position.y < self.height
     }
 }

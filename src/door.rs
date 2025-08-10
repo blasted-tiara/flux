@@ -30,6 +30,10 @@ impl Door {
             sprite!("door_1", x = x, y = y);
         }
     }
+    
+    pub fn draw_center(&self) {
+        self.solid.position.draw(10);
+    }
 
     pub fn draw_bounding_box(&self) {
         self.solid.get_bound().draw_bounding_box();

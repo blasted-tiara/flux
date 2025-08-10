@@ -41,8 +41,11 @@ use flux::*;
 mod level;
 use level::*;
 
-mod levels;
+pub mod levels;
 use levels::*;
+
+mod level_manager;
+use level_manager::*;
 
 mod background;
 use background::*;
@@ -62,7 +65,7 @@ const FLUX_THRESHOLD: f32 = 400.;
  
 #[turbo::game]
 struct GameState {
-    level: Level,
+    level_manager: LevelManager,
     local_player: Player,
     server_player_position: Vector2,
     unprocessed_local_inputs: VecDeque<UserInput>,
@@ -80,10 +83,10 @@ struct GameState {
 
 impl GameState {
     pub fn new() -> Self {
-        let level = construct_level0();
-        let p1_start = level.player1_start_position.clone();
+        let level_manager = LevelManager::new();
+        let p1_start = level_manager.loaded_level.player1_start_position.clone();
         Self {
-            level,
+            level_manager,
             local_player: Player::new(p1_start.x, p1_start.y),
             server_player_position: Vector2::zero(),
             unprocessed_local_inputs: VecDeque::new(),
@@ -113,7 +116,9 @@ impl GameState {
             GameFlowState::WaitingForPlayer2 => {
                 self.handle_waiting_for_player_2_flow();
             },
-            GameFlowState::Credits => {}
+            GameFlowState::Credits => {
+                self.handle_credits_flow();
+            }
         }
     }
     
@@ -138,8 +143,38 @@ impl GameState {
         clear(0x00000000);
         text!(
             "Waiting for player 2...",
-            x = SCREEN_WIDTH / 2 - 30,
+            x = SCREEN_WIDTH / 2 - 50,
             y = SCREEN_HEIGHT / 2,
+            color = 0x00ffffff,
+            font = "large",
+        );
+    }
+    
+    fn handle_credits_flow(&mut self) {
+        let gamepad = gamepad::get(0);
+        if gamepad.a.pressed() || gamepad.b.pressed() || gamepad.x.pressed() || gamepad.y.pressed() || gamepad.start.pressed() || gamepad.select.pressed() {
+            self.game_flow_state = GameFlowState::MainMenu;
+        }
+
+        clear(0x00000000);
+        text!(
+            "Lucas Carbone",
+            x = SCREEN_WIDTH / 2 - 50,
+            y = SCREEN_HEIGHT / 2,
+            color = 0x00ffffff,
+            font = "large",
+        );
+        text!(
+            "Enver Podgorcevic",
+            x = SCREEN_WIDTH / 2 - 50,
+            y = SCREEN_HEIGHT / 2 + 30,
+            color = 0x00ffffff,
+            font = "large",
+        );
+        text!(
+            "Press any key",
+            x = SCREEN_WIDTH / 2 - 50,
+            y = SCREEN_HEIGHT - 50,
             color = 0x00ffffff,
             font = "large",
         );
@@ -178,8 +213,8 @@ impl GameState {
             while let Ok(msg) = conn.recv() { 
                 match msg {
                     ServerMsg::GameState { harvesters, actor_manager, player1, last_processed_tick_p1, player2, last_processed_tick_p2 } => {
-                        self.level.harvesters = harvesters;
-                        self.level.actor_manager = actor_manager;
+                        self.level_manager.loaded_level.harvesters = harvesters;
+                        self.level_manager.loaded_level.actor_manager = actor_manager;
                         if self.local_player.id == player1.id  {
                             self.server_player_position = player1.actor.position.clone();
                             self.local_player = player1;
@@ -224,13 +259,27 @@ impl GameState {
                         
                         // Replay unprocessed commands
                         for input in &self.unprocessed_local_inputs {
-                            simulate_frame(&mut self.local_player, &mut self.level, input);
+                            simulate_frame(&mut self.local_player, &mut self.level_manager.loaded_level, input);
                         }
                         
                         self.last_fpsu = self.frames_per_server_update;
                         self.frames_per_server_update = 0;
                     },
-                    _ => {}
+                    ServerMsg::GameCompleted => {
+                        log!("Completed game");
+                        self.game_flow_state = GameFlowState::Credits;
+                    },
+                    ServerMsg::LevelCompleted => {
+                        log!("Completed level");
+                        self.level_manager.load_next_level();
+                        let p1_start = self.level_manager.loaded_level.player1_start_position.clone();
+                        self.local_player = Player::new(p1_start.x, p1_start.y);
+                        self.server_player_position = Vector2::zero();
+                        self.unprocessed_local_inputs = VecDeque::new();
+                        self.remote_player_snapshots = VecDeque::new();
+                        self.particle_manager = ParticleManager::new();
+                    },
+                    _ => {},
                 }
             }
 
@@ -239,11 +288,11 @@ impl GameState {
         }
         
         self.unprocessed_local_inputs.push_back(user_input.clone());
-        simulate_frame(&mut self.local_player, &mut self.level, &user_input);
+        simulate_frame(&mut self.local_player, &mut self.level_manager.loaded_level, &user_input);
 
         let bounding_box = &BoundingBox { top: -10., right: 700., bottom: 300., left: -10. };
         if 0 == time::tick() % 3 {
-            for flux_core in &self.level.tilemap.flux_cores {
+            for flux_core in &self.level_manager.loaded_level.tilemap.flux_cores {
                 
                 match flux_core.core_type {
                     FluxCoreType::Radial => {
@@ -265,12 +314,15 @@ impl GameState {
         }
 
         self.particle_manager.generate_box_of_particles(0, bounding_box);
-        self.particle_manager.update(&self.level.tilemap.flux_cores);
+        self.particle_manager.update(&self.level_manager.loaded_level.tilemap.flux_cores);
 
-        let camera_position = self.level.tilemap.lock_viewport_to_tilemap(&Vector2::new(self.local_player.actor.position.x, self.local_player.actor.position.y), &Vector2::new(SCREEN_WIDTH as f32, SCREEN_HEIGHT as f32));
+        let camera_position = self.level_manager.loaded_level.tilemap.lock_viewport_to_tilemap(
+            &Vector2::new(self.local_player.actor.position.x, self.local_player.actor.position.y),
+            &Vector2::new(SCREEN_WIDTH as f32, SCREEN_HEIGHT as f32)
+        );
         let new_camera_position_x = lerp(self.camera_center_x as f32, camera_position.x, 0.1);
         let new_camera_position_y = lerp(self.camera_center_y as f32, camera_position.y, 0.1);
-        self.level.background.draw(Vector2{ x: new_camera_position_x, y: new_camera_position_y });
+        self.level_manager.loaded_level.background.draw(Vector2{ x: new_camera_position_x, y: new_camera_position_y });
         
         //bounding_box.draw_bounding_box();
         self.camera_center_x = new_camera_position_x;
@@ -280,15 +332,15 @@ impl GameState {
         self.particle_manager.draw();
 
         //self.level.tilemap.draw_flux_field();
-        for t in &self.level.tilemap.tiles {
+        for t in &self.level_manager.loaded_level.tilemap.tiles {
             t.draw();
         }
         
-        for f in &self.level.tilemap.flux_cores {
+        for f in &self.level_manager.loaded_level.tilemap.flux_cores {
             f.draw();
         }
         
-        for d in &self.level.tilemap.doors {
+        for d in &self.level_manager.loaded_level.tilemap.doors {
             d.draw();
         }
         
@@ -306,11 +358,11 @@ impl GameState {
             None => {}
         }
         //self.server_player_position.draw(5);
-        self.level.harvesters.iter().for_each(|h| { h.draw(&mut self.level.actor_manager); /* h.draw_bounding_box(); */ } );
+        self.level_manager.loaded_level.harvesters.iter().for_each(|h| { h.draw(&mut self.level_manager.loaded_level.actor_manager); /* h.draw_bounding_box(); */ } );
         
         let mut total_flux = 0.;
-        for harvester in &mut self.level.harvesters {
-            total_flux += harvester.calculate_flux(&mut self.level.actor_manager, &self.level.tilemap.flux_cores);
+        for harvester in &mut self.level_manager.loaded_level.harvesters {
+            total_flux += harvester.calculate_flux(&mut self.level_manager.loaded_level.actor_manager, &self.level_manager.loaded_level.tilemap.flux_cores);
         }
 
         let screen_center = Vector2::new(self.camera_center_x as f32, self.camera_center_y as f32);
@@ -391,12 +443,14 @@ pub enum ServerMsg {
         last_processed_tick_p2: Option<usize>,
         harvesters: Vec<Harvester>,
         actor_manager: ActorManager,
-    }
+    },
+    LevelCompleted,
+    GameCompleted,
 }
 
 #[turbo::os::channel(program = "testchannel4", name = "main")] 
 pub struct FluxGameStateChannel {
-    level: Level,
+    level_manager: LevelManager,
     player1: Player,
     player1_inputs: VecDeque<UserInput>,
     player1_ready: bool,
@@ -411,11 +465,11 @@ impl ChannelHandler for FluxGameStateChannel {
     type Send = ServerMsg; // outgoing to client
                              //
     fn new() -> Self { 
-        let level = construct_level0();
+        let level = construct_level_1();
         let player1_start_position = level.player1_start_position.clone();
         let player2_start_position = level.player2_start_position.clone();
         Self {
-            level,
+            level_manager: LevelManager::new(),
             player1: Player::new(player1_start_position.x, player1_start_position.y),
             player1_inputs: VecDeque::new(),
             player1_ready: false,
@@ -464,21 +518,47 @@ impl ChannelHandler for FluxGameStateChannel {
                 (Some(input1), Some(input2)) => {
                     last_processed_tick_p1 = Some(input1.tick);
                     last_processed_tick_p2 = Some(input2.tick);
-                    simulate_server_frame(&mut self.player1, &input1, &mut self.player2, &input2, &mut self.level);
+                    simulate_server_frame(&mut self.player1, &input1, &mut self.player2, &input2, &mut self.level_manager.loaded_level);
                 },
                 (Some(input1), None) => {
                     last_processed_tick_p1 = Some(input1.tick);
-                    simulate_server_frame(&mut self.player1, &input1, &mut self.player2, &UserInput::new(), &mut self.level);
+                    simulate_server_frame(&mut self.player1, &input1, &mut self.player2, &UserInput::new(), &mut self.level_manager.loaded_level);
                 },
                 (None, Some(input2)) => {
                     last_processed_tick_p2 = Some(input2.tick);
-                    simulate_server_frame(&mut self.player1, &UserInput::new(), &mut self.player2, &input2, &mut self.level);
+                    simulate_server_frame(&mut self.player1, &UserInput::new(), &mut self.player2, &input2, &mut self.level_manager.loaded_level);
                 },
                 (None, None) => {}
             }
         }
+        
+        if !self.level_manager.loaded_level.tilemap.is_inside(&self.player1.get_position()) && !self.level_manager.loaded_level.tilemap.is_inside(&self.player2.get_position()) {
+            self.level_manager.load_next_level();
+            match self.level_manager.current_level {
+                Some(_) => {
+                    let p1_start = self.level_manager.loaded_level.player1_start_position.clone();
+                    self.player1 = Player::new(p1_start.x, p1_start.y);
 
-        return os::server::channel::broadcast(ServerMsg::GameState { harvesters: self.level.harvesters.clone(), actor_manager: self.level.actor_manager.clone(), player1: self.player1.clone(), last_processed_tick_p1, player2: self.player2.clone(), last_processed_tick_p2 });
+                    let p2_start = self.level_manager.loaded_level.player2_start_position.clone();
+                    self.player2 = Player::new(p2_start.x, p2_start.y);
+                    return os::server::channel::broadcast(ServerMsg::LevelCompleted);
+                },
+                None => {
+                    return os::server::channel::broadcast(ServerMsg::GameCompleted);
+                }
+            }
+        }
+
+        return os::server::channel::broadcast(
+            ServerMsg::GameState {
+                harvesters: self.level_manager.loaded_level.harvesters.clone(),
+                actor_manager: self.level_manager.loaded_level.actor_manager.clone(),
+                player1: self.player1.clone(),
+                last_processed_tick_p1,
+                player2: self.player2.clone(),
+                last_processed_tick_p2
+            }
+        );
     }
 
     fn on_data(&mut self, user_id: &str, data: Self::Recv) -> Result<(), std::io::Error> { 
@@ -500,7 +580,7 @@ impl ChannelHandler for FluxGameStateChannel {
                 
                 if self.player1_ready && self.player2_ready {
                     self.game_started = true;
-                    return os::server::channel::broadcast(ServerMsg::StartGame );
+                    return os::server::channel::broadcast(ServerMsg::StartGame);
                 }
             }
         }
@@ -609,15 +689,5 @@ fn simulate_server_frame(player1: &mut Player, input1: &UserInput, player2: &mut
         if door.id == 0 {
             door.open = total_flux >= FLUX_THRESHOLD;
         }
-    }
-}
-
-pub fn clamp(value: f32, min: f32, max: f32) -> f32 {
-    if value < min {
-        value
-    } else if value > max {
-        max
-    } else {
-        value
     }
 }
