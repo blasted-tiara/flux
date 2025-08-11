@@ -83,11 +83,9 @@ struct GameState {
 
 impl GameState {
     pub fn new() -> Self {
-        let level_manager = LevelManager::new();
-        let p1_start = level_manager.loaded_level.player1_start_position.clone();
         Self {
-            level_manager,
-            local_player: Player::new(p1_start.x, p1_start.y),
+            level_manager: LevelManager::new(),
+            local_player: Player::new(0.0, 0.0),
             server_player_position: Vector2::zero(),
             unprocessed_local_inputs: VecDeque::new(),
             remote_player_snapshots: VecDeque::new(),
@@ -123,6 +121,10 @@ impl GameState {
     }
     
     fn handle_waiting_for_player_2_flow(&mut self) {
+        self.camera_center_x = SCREEN_WIDTH as f32 / 2.;
+        self.camera_center_y = SCREEN_HEIGHT as f32 / 2.;
+        set_xy(self.camera_center_x, self.camera_center_y);
+
         if let Some(conn) = FluxGameStateChannel::subscribe("default") { 
             while let Ok(msg) = conn.recv() { 
                 match msg {
@@ -151,6 +153,10 @@ impl GameState {
     }
     
     fn handle_credits_flow(&mut self) {
+        self.camera_center_x = SCREEN_WIDTH as f32 / 2.;
+        self.camera_center_y = SCREEN_HEIGHT as f32 / 2.;
+        set_xy(self.camera_center_x, self.camera_center_y);
+
         let gamepad = gamepad::get(0);
         if gamepad.a.pressed() || gamepad.b.pressed() || gamepad.x.pressed() || gamepad.y.pressed() || gamepad.start.pressed() || gamepad.select.pressed() {
             self.game_flow_state = GameFlowState::MainMenu;
@@ -159,21 +165,21 @@ impl GameState {
         clear(0x00000000);
         text!(
             "Lucas Carbone",
-            x = SCREEN_WIDTH / 2 - 50,
+            x = SCREEN_WIDTH / 2 - 20,
             y = SCREEN_HEIGHT / 2,
             color = 0x00ffffff,
             font = "large",
         );
         text!(
             "Enver Podgorcevic",
-            x = SCREEN_WIDTH / 2 - 50,
+            x = SCREEN_WIDTH / 2 - 20,
             y = SCREEN_HEIGHT / 2 + 30,
             color = 0x00ffffff,
             font = "large",
         );
         text!(
             "Press any key",
-            x = SCREEN_WIDTH / 2 - 50,
+            x = SCREEN_WIDTH / 2 - 20,
             y = SCREEN_HEIGHT - 50,
             color = 0x00ffffff,
             font = "large",
@@ -181,6 +187,10 @@ impl GameState {
     }
     
     fn handle_main_menu_flow(&mut self) {
+        self.camera_center_x = SCREEN_WIDTH as f32 / 2.;
+        self.camera_center_y = SCREEN_HEIGHT as f32 / 2.;
+        set_xy(self.camera_center_x, self.camera_center_y);
+
         clear(0x00000000);
         let selected_option = handle_input(&mut self.main_menu_options);
         match selected_option {
@@ -248,7 +258,7 @@ impl GameState {
                                     }
                                 },
                                 None => {},
-                        }
+                            }
 
                             self.remote_player_snapshots.push_front(player1);
                         }
@@ -272,8 +282,7 @@ impl GameState {
                     ServerMsg::LevelCompleted => {
                         log!("Completed level");
                         self.level_manager.load_next_level();
-                        let p1_start = self.level_manager.loaded_level.player1_start_position.clone();
-                        self.local_player = Player::new(p1_start.x, p1_start.y);
+                        self.local_player = Player::new_with_id(self.local_player.id.clone(), 0.0, 0.0);
                         self.server_player_position = Vector2::zero();
                         self.unprocessed_local_inputs = VecDeque::new();
                         self.remote_player_snapshots = VecDeque::new();
@@ -448,7 +457,7 @@ pub enum ServerMsg {
     GameCompleted,
 }
 
-#[turbo::os::channel(program = "testchannel4", name = "main")] 
+#[turbo::os::channel(program = "testchannel6", name = "main")] 
 pub struct FluxGameStateChannel {
     level_manager: LevelManager,
     player1: Player,
@@ -537,10 +546,10 @@ impl ChannelHandler for FluxGameStateChannel {
             match self.level_manager.current_level {
                 Some(_) => {
                     let p1_start = self.level_manager.loaded_level.player1_start_position.clone();
-                    self.player1 = Player::new(p1_start.x, p1_start.y);
+                    self.player1 = Player::new_with_id(self.player1.id.clone(), p1_start.x, p1_start.y);
 
                     let p2_start = self.level_manager.loaded_level.player2_start_position.clone();
-                    self.player2 = Player::new(p2_start.x, p2_start.y);
+                    self.player2 = Player::new_with_id(self.player2.id.clone(), p2_start.x, p2_start.y);
                     return os::server::channel::broadcast(ServerMsg::LevelCompleted);
                 },
                 None => {
@@ -562,7 +571,6 @@ impl ChannelHandler for FluxGameStateChannel {
     }
 
     fn on_data(&mut self, user_id: &str, data: Self::Recv) -> Result<(), std::io::Error> { 
-        log!("Data rec!");
         match data {
             ClientMsg::UserInput { user_input } => {
                 if user_id == self.player1.id {

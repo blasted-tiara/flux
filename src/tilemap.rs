@@ -43,8 +43,6 @@ impl TileMap {
             }
         }
         
-        log!("Tiles on level: {}", tiles.len());
-
         let mut flux_cores: Vec<FluxCore> = Vec::new();
         for j in 0..height {
             for i in 0..width {

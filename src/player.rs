@@ -43,6 +43,28 @@ impl Player {
             picked_item: Option::None,
         }
     }
+
+    pub fn new_with_id(id: String, x: f32, y: f32) -> Self {
+        Self {
+            id,
+            actor: Actor::new(Vector2::new(x, y),20., 35.),
+            velocity: Vector2::new(0., 0.),
+            move_speed_max: 5.0,
+            coyote_timer: 0,
+            jump_buffer_timer: 0,
+            gravity: 1.5,
+            max_gravity: 16.,
+            is_facing_left: true,
+            acceleration: 0.6,
+            deceleration: 0.4,
+            jump_force: 13.,
+            coyote_timer_duration: 3,
+            jump_buffer_timer_duration: 8,
+            movement_status: MovementStatus::IsFalling,
+            try_pick_item: false,
+            picked_item: Option::None,
+        }
+    }
    
     pub fn handle_input(&mut self, actor_manager: &mut ActorManager, user_input: &UserInput) {
         match self.movement_status {
