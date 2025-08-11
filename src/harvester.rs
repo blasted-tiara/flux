@@ -1,8 +1,6 @@
 use crate::*;
 
 const GRAVITY: f32 = 1.6;
-const MAX_FLUX: f32 = 200.;
-const FLUX_LEVELS: u32 = 3;
 
 #[turbo::serialize]
 pub struct Harvester {
