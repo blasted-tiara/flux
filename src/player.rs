@@ -108,7 +108,7 @@ impl Player {
         self.velocity.clamp_x(-self.move_speed_max, self.move_speed_max);
         let current_gravity = if self.movement_status == MovementStatus::IsFalling && !user_input.jump_pressed
             {
-                Vector2::new(0., self.gravity * 1.)
+                Vector2::new(0., self.gravity * 0.7)
             } else if self.velocity.y.abs() < 4.0 {
                 Vector2::new(0., self.gravity / 4.)
             } else { 
