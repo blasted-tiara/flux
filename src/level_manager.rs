@@ -48,7 +48,7 @@ impl LevelManager {
     fn construct_level(level_name: LevelName) -> Level {
         match level_name {
             LevelName::Level1 => construct_level_1(),
-            LevelName::Level2 => construct_level_1(),
+            LevelName::Level2 => construct_level_2(),
         }
     }
 }
