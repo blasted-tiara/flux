@@ -457,7 +457,7 @@ pub enum ServerMsg {
     GameCompleted,
 }
 
-#[turbo::os::channel(program = "testchannel6", name = "main")] 
+#[turbo::os::channel(program = "testchannel4", name = "main")] 
 pub struct FluxGameStateChannel {
     level_manager: LevelManager,
     player1: Player,
@@ -678,7 +678,6 @@ fn simulate_server_frame(player1: &mut Player, input1: &UserInput, player2: &mut
         harvester.apply_gravity(&mut level.actor_manager);
     }
 
-    // FIXME: Player can pick up other player's harvester, which causes the game to glitch
     player1.pick_item(&mut level.actor_manager);
     player2.pick_item(&mut level.actor_manager);
     // Move player

@@ -145,9 +145,12 @@ impl Player {
     
     pub fn pick_item(&mut self, actor_manager: &mut ActorManager) {
         if self.try_pick_item {
-            let distance_tolerance = 40.;
+            let distance_tolerance = 30.;
             let player_bounding_box = self.actor.get_bound();
             for (actor_id, actor) in &mut actor_manager.actors {
+                if actor.is_child == true {
+                    continue;
+                }
                 let item_bounding_box = actor.get_bound();
                 if (player_bounding_box.bottom - item_bounding_box.bottom).abs() < distance_tolerance {
                     if self.is_facing_left {
