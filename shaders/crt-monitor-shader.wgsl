@@ -13,6 +13,10 @@ struct VertexInput {
     @location(0) pos: vec2<f32>,
     @location(1) uv: vec2<f32>,
 };
+
+fn rand2(n: vec2<f32>) -> f32 {
+    return fract(sin(dot(n, vec2<f32>(12.9898, 78.233))) * 43758.5453);
+}
  
 // Output color fragment from the shader
 struct VertexOutput {
@@ -40,9 +44,32 @@ var s_canvas: sampler;
 // Main fragment shader function
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    var color: vec4<f32> = textureSample(t_canvas, s_canvas, in.uv);
-    //color = applyColorCycle(color, in.uv, global.tick);
-    return color;
+    var uv = in.uv;
+    let time_seconds = f32(global.tick) / 60.0;
+    let wave = sin(uv.y * 120.0 + time_seconds * 5.0) * 0.0005;
+    uv.x += wave;
+
+    // Small random jitter per line
+    let jitter = (rand2(vec2<f32>(floor(uv.y * 240.0), time_seconds)) - 0.5) * 0.0005;
+    uv.x += jitter;
+    
+        // Chromatic aberration: sample RGB separately
+    let shift = 0.001;
+    let colR = textureSample(t_canvas, s_canvas, uv + vec2<f32>( shift, 0.0)).r;
+    let colG = textureSample(t_canvas, s_canvas, uv).g;
+    let colB = textureSample(t_canvas, s_canvas, uv + vec2<f32>(-shift, 0.0)).b;
+
+    var color = vec3<f32>(colR, colG, colB);
+
+    // Scanlines
+    let scanline = 0.9 + 0.1 * sin(uv.y * 500.0);
+    color *= scanline;
+
+    // Slight desaturation
+    let gray = dot(color, vec3<f32>(0.299, 0.587, 0.114));
+    color = mix(vec3<f32>(gray), color, 0.9);
+
+    return vec4<f32>(color, 1.0);
 }
 
 fn applyColorCycle(color: vec4<f32>, uv: vec2<f32>, tick: u32) -> vec4<f32> {

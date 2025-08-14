@@ -8,7 +8,7 @@ width = 512
 height = 288
 
 [shader]
-default-surface-shader = "my-awesome-shader"
+default-surface-shader = "crt-monitor-shader"
 
 [turbo-os]
 api-url = "https://os.turbo.computer"
