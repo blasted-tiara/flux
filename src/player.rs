@@ -19,6 +19,7 @@ pub struct Player {
     movement_status: MovementStatus,
     try_pick_item: bool,
     picked_item: Option<ActorId>,
+    used_field_jump: bool,
 }
 
 impl Player {
@@ -45,10 +46,11 @@ impl Player {
             movement_status: MovementStatus::IsFalling,
             try_pick_item: false,
             picked_item: Option::None,
+            used_field_jump: false,
         }
     }
    
-    pub fn handle_input(&mut self, actor_manager: &mut ActorManager, user_input: &UserInput) {
+    pub fn handle_input(&mut self, actor_manager: &mut ActorManager, user_input: &UserInput, flux_field: Vector2) {
         match self.movement_status {
             MovementStatus::IsLanded => {
                 if user_input.jump_just_pressed || self.jump_buffer_timer > 0 {
@@ -58,6 +60,10 @@ impl Player {
                 }
             },
             MovementStatus::InJump => {
+                if !self.used_field_jump && user_input.jump_just_pressed {
+                    self.velocity += flux_field * 1.0;
+                    self.used_field_jump = true;
+                }
                 if self.velocity.y > 0. {
                     self.movement_status = MovementStatus::IsFalling;
                 }
@@ -127,22 +133,23 @@ impl Player {
     
     pub fn pick_item(&mut self, actor_manager: &mut ActorManager) {
         if self.try_pick_item {
-            let distance_tolerance = 30.;
+            let vertical_distance_tolerance = 20.0;
+            let horizontal_distance_tolerance = 10.0;
             let player_bounding_box = self.actor.get_bound();
             for (actor_id, actor) in &mut actor_manager.actors {
                 if actor.is_child == true {
                     continue;
                 }
                 let item_bounding_box = actor.get_bound();
-                if (player_bounding_box.bottom - item_bounding_box.bottom).abs() < distance_tolerance {
+                if (player_bounding_box.bottom - item_bounding_box.bottom).abs() < vertical_distance_tolerance {
                     if self.is_facing_left {
                         // check if there's an item close by to the left
-                        if (item_bounding_box.right - player_bounding_box.left).abs() < distance_tolerance {
+                        if (item_bounding_box.right - player_bounding_box.left).abs() < horizontal_distance_tolerance {
                             self.picked_item = Option::Some(*actor_id);
                             actor.is_child = true;
                         }
                     } else {
-                        if (item_bounding_box.left - player_bounding_box.right).abs() < distance_tolerance {
+                        if (item_bounding_box.left - player_bounding_box.right).abs() < horizontal_distance_tolerance {
                             self.picked_item = Option::Some(*actor_id);
                             actor.is_child = true;
                         }
@@ -165,6 +172,7 @@ impl Player {
         let on_y_collision = |collision_happened: bool| {
             if collision_happened {
                 if self.velocity.y >= 0.0 {
+                    self.used_field_jump = false;
                     self.movement_status = MovementStatus::IsLanded;
                 }
                 self.velocity.y = 0.;
