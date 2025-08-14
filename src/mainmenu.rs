@@ -12,7 +12,8 @@ pub fn draw_main_menu(main_menu_options: &mut Vec<MenuOption>) {
 pub enum GameFlowState {
     MainMenu,
     Credits,
-    InGame,
+    InGameSingle,
+    InGameCoOp,
     WaitingForPlayer2,
 }
 
@@ -21,7 +22,8 @@ impl fmt::Display for GameFlowState {
         let state_str = match self {
             GameFlowState::MainMenu => "Main Menu",
             GameFlowState::Credits => "Credits",
-            GameFlowState::InGame => "In Game",
+            GameFlowState::InGameSingle => "In Game Single",
+            GameFlowState::InGameCoOp => "In Game CoOp",
             GameFlowState::WaitingForPlayer2 => "Waiting for Player 2",
         };
         write!(f, "{}", state_str)
@@ -62,7 +64,7 @@ pub fn get_main_menu_options() -> Vec<MenuOption> {
     let x_coord = 50;
     let y_coord = 110;
     let option_height = 50;
-    let options = vec!["Start", "Credits"];
+    let options = vec!["Start", "Co-Op", "Credits"];
     for (idx, option) in options.iter().enumerate() {
         main_menu_options.push(MenuOption::new(String::from(*option), x_coord, y_coord + option_height * idx as i32, idx == 0));
     }
