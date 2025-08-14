@@ -129,8 +129,8 @@ pub fn construct_level_2() -> Level {
         }
     }
 
-    let player1_start_position = Vector2 { x: 50., y: 0. };
-    let player2_start_position = Vector2 { x: 400., y: 0. };
+    let player1_start_position = Vector2 { x: 50., y: 50. };
+    let player2_start_position = Vector2 { x: 400., y: 50. };
     
     let mut background = Background::new(0xfdfeecff);
     background.layers.push(Layer {
