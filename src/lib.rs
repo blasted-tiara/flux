@@ -53,6 +53,9 @@ use background::*;
 mod mainmenu;
 use mainmenu::*;
 
+mod hud;
+use hud::*;
+
 use core::fmt;
 use std::ops::{self};
 use std::f32::consts::PI;
@@ -83,9 +86,11 @@ struct GameState {
 
 impl GameState {
     pub fn new() -> Self {
+        let level_manager =  LevelManager::new();
+        let local_player_position = level_manager.loaded_level.player1_start_position.clone();
         Self {
-            level_manager: LevelManager::new(),
-            local_player: Player::new(0.0, 0.0),
+            level_manager,
+            local_player: Player::new(local_player_position.x, local_player_position.y),
             server_player_position: Vector2::zero(),
             unprocessed_local_inputs: VecDeque::new(),
             remote_player_snapshots: VecDeque::new(),
@@ -108,8 +113,11 @@ impl GameState {
             GameFlowState::MainMenu => {
                 self.handle_main_menu_flow();
             },
-            GameFlowState::InGame => {
-                self.handle_in_game_flow();
+            GameFlowState::InGameSingle => {
+                self.handle_in_game_co_op_flow();
+            }
+            GameFlowState::InGameCoOp => {
+                self.handle_in_game_co_op_flow();
             },
             GameFlowState::WaitingForPlayer2 => {
                 self.handle_waiting_for_player_2_flow();
@@ -135,7 +143,7 @@ impl GameState {
                         }
                     },
                     ServerMsg::StartGame  => {
-                        self.game_flow_state = GameFlowState::InGame;
+                        self.game_flow_state = GameFlowState::InGameCoOp;
                     },
                     _ => {},
                 }
@@ -158,7 +166,7 @@ impl GameState {
         set_xy(self.camera_center_x, self.camera_center_y);
 
         let gamepad = gamepad::get(0);
-        if gamepad.a.pressed() || gamepad.b.pressed() || gamepad.x.pressed() || gamepad.y.pressed() || gamepad.start.pressed() || gamepad.select.pressed() {
+        if gamepad.a.just_pressed() || gamepad.b.just_pressed() || gamepad.x.just_pressed() || gamepad.y.just_pressed() || gamepad.start.just_pressed() || gamepad.select.just_pressed() {
             self.game_flow_state = GameFlowState::MainMenu;
         }
 
@@ -196,6 +204,10 @@ impl GameState {
         match selected_option {
             Some(text) => {
                 if text == "Start" {
+                    self.game_flow_state = GameFlowState::InGameSingle;
+                    self.reload_game();
+                    return;
+                } else if text == "Co-Op" {
                     self.game_flow_state = GameFlowState::WaitingForPlayer2;
                     return;
                 } else if text == "Credits" {
@@ -208,7 +220,7 @@ impl GameState {
         draw_main_menu(&mut self.main_menu_options);
     }
     
-    fn handle_in_game_flow(&mut self) {
+    fn handle_in_game_co_op_flow(&mut self) {
         let gamepad = gamepad::get(0);
         let user_input = UserInput {
             tick: time::tick(),
@@ -219,84 +231,82 @@ impl GameState {
             a_just_pressed: gamepad.a.just_pressed(),
         };
         
-        if let Some(conn) = FluxGameStateChannel::subscribe("default") { 
-            while let Ok(msg) = conn.recv() { 
-                match msg {
-                    ServerMsg::GameState { harvesters, actor_manager, player1, last_processed_tick_p1, player2, last_processed_tick_p2 } => {
-                        self.level_manager.loaded_level.harvesters = harvesters;
-                        self.level_manager.loaded_level.actor_manager = actor_manager;
-                        if self.local_player.id == player1.id  {
-                            self.server_player_position = player1.actor.position.clone();
-                            self.local_player = player1;
+        if matches!(self.game_flow_state, GameFlowState::InGameCoOp) {
+            if let Some(conn) = FluxGameStateChannel::subscribe("default") { 
+                while let Ok(msg) = conn.recv() { 
+                    match msg {
+                        ServerMsg::GameState { harvesters, actor_manager, player1, last_processed_tick_p1, player2, last_processed_tick_p2 } => {
+                            self.level_manager.loaded_level.harvesters = harvesters;
+                            self.level_manager.loaded_level.actor_manager = actor_manager;
+                            if self.local_player.id == player1.id  {
+                                self.server_player_position = player1.actor.position.clone();
+                                self.local_player = player1;
 
-                            match last_processed_tick_p1 {
-                                Some(last_tick) => {
-                                    while let Some(user_input) = self.unprocessed_local_inputs.pop_front() {
-                                        self.last_processed_tick = last_tick;
-                                        if user_input.tick > last_tick {
-                                            self.unprocessed_local_inputs.push_front(user_input);
-                                            break;
+                                match last_processed_tick_p1 {
+                                    Some(last_tick) => {
+                                        while let Some(user_input) = self.unprocessed_local_inputs.pop_front() {
+                                            self.last_processed_tick = last_tick;
+                                            if user_input.tick > last_tick {
+                                                self.unprocessed_local_inputs.push_front(user_input);
+                                                break;
+                                            }
                                         }
-                                    }
-                                },
-                                None => {},
-                            }
+                                    },
+                                    None => {},
+                                }
 
-                            self.remote_player_snapshots.push_front(player2);
-                        } else if self.local_player.id == player2.id {
-                            self.server_player_position = player2.actor.position.clone();
-                            self.local_player = player2;
+                                self.remote_player_snapshots.push_front(player2);
+                            } else if self.local_player.id == player2.id {
+                                self.server_player_position = player2.actor.position.clone();
+                                self.local_player = player2;
 
-                            match last_processed_tick_p2 {
-                                Some(last_tick) => {
-                                    while let Some(user_input) = self.unprocessed_local_inputs.pop_front() {
-                                        self.last_processed_tick = last_tick;
-                                        if user_input.tick > last_tick {
-                                            self.unprocessed_local_inputs.push_front(user_input);
-                                            break;
+                                match last_processed_tick_p2 {
+                                    Some(last_tick) => {
+                                        while let Some(user_input) = self.unprocessed_local_inputs.pop_front() {
+                                            self.last_processed_tick = last_tick;
+                                            if user_input.tick > last_tick {
+                                                self.unprocessed_local_inputs.push_front(user_input);
+                                                break;
+                                            }
                                         }
-                                    }
-                                },
-                                None => {},
-                            }
+                                    },
+                                    None => {},
+                                }
 
-                            self.remote_player_snapshots.push_front(player1);
-                        }
-                        
-                        if self.remote_player_snapshots.len() > self.max_player_snapshots {
-                            self.remote_player_snapshots.pop_back();
-                        }
-                        
-                        // Replay unprocessed commands
-                        for input in &self.unprocessed_local_inputs {
-                            simulate_frame(&mut self.local_player, &mut self.level_manager.loaded_level, input);
-                        }
-                        
-                        self.last_fpsu = self.frames_per_server_update;
-                        self.frames_per_server_update = 0;
-                    },
-                    ServerMsg::GameCompleted => {
-                        log!("Completed game");
-                        self.game_flow_state = GameFlowState::Credits;
-                    },
-                    ServerMsg::LevelCompleted => {
-                        log!("Completed level");
-                        self.level_manager.load_next_level();
-                        self.local_player = Player::new_with_id(self.local_player.id.clone(), 0.0, 0.0);
-                        self.server_player_position = Vector2::zero();
-                        self.unprocessed_local_inputs = VecDeque::new();
-                        self.remote_player_snapshots = VecDeque::new();
-                        self.particle_manager = ParticleManager::new();
-                    },
-                    _ => {},
+                                self.remote_player_snapshots.push_front(player1);
+                            }
+                            
+                            if self.remote_player_snapshots.len() > self.max_player_snapshots {
+                                self.remote_player_snapshots.pop_back();
+                            }
+                            
+                            // Replay unprocessed commands
+                            for input in &self.unprocessed_local_inputs {
+                                simulate_frame(&mut self.local_player, &mut self.level_manager.loaded_level, input);
+                            }
+                            
+                            self.last_fpsu = self.frames_per_server_update;
+                            self.frames_per_server_update = 0;
+                        },
+                        ServerMsg::GameCompleted => {
+                            log!("Completed game");
+                            self.game_flow_state = GameFlowState::Credits;
+                        },
+                        ServerMsg::LevelCompleted => {
+                            log!("Completed level");
+                            self.load_next_level();
+                        },
+                        _ => {},
+                    }
                 }
+
+                // Send gamepad state to the server
+                let _ = conn.send(&ClientMsg::UserInput { user_input: user_input.clone() });
             }
 
-            // Send gamepad state to the server
-            let _ = conn.send(&ClientMsg::UserInput { user_input: user_input.clone() });
+            self.unprocessed_local_inputs.push_back(user_input.clone());
         }
         
-        self.unprocessed_local_inputs.push_back(user_input.clone());
         simulate_frame(&mut self.local_player, &mut self.level_manager.loaded_level, &user_input);
 
         let bounding_box = &BoundingBox { top: -10., right: 700., bottom: 300., left: -10. };
@@ -376,11 +386,44 @@ impl GameState {
 
         let screen_center = Vector2::new(self.camera_center_x as f32, self.camera_center_y as f32);
         show_total_flux(total_flux, &screen_center);
-        show_debug_info(self.last_fpsu, &screen_center);
+        //show_debug_info(self.last_fpsu, &screen_center);
+        
+        //draw_hud(self.camera_center_x, self.camera_center_y);
         
         if !audio::is_playing("bg-music-nothing") {
             audio::play("bg-music-nothing");
         }
+
+        if matches!(self.game_flow_state, GameFlowState::InGameSingle) {
+            if !self.level_manager.loaded_level.tilemap.is_inside(&self.local_player.get_position()) {
+                log!("Completed level");
+                self.load_next_level();
+                match self.level_manager.current_level {
+                    Some(_) => { },
+                    None => {
+                        log!("Completed game");
+                        self.game_flow_state = GameFlowState::Credits;
+                    }
+                }
+            }
+        }
+    }
+    
+    fn reload_game(&mut self) {
+        let level_manager =  LevelManager::new();
+        let local_player_position = level_manager.loaded_level.player1_start_position.clone();
+        self.level_manager = level_manager;
+        self.local_player = Player::new(local_player_position.x, local_player_position.y);
+    }
+
+    fn load_next_level(&mut self) {
+        self.level_manager.load_next_level();
+        let local_player_start_position = self.level_manager.loaded_level.player1_start_position.clone();
+        self.local_player = Player::new_with_id(self.local_player.id.clone(), local_player_start_position.x, local_player_start_position.y);
+        self.server_player_position = Vector2::zero();
+        self.unprocessed_local_inputs = VecDeque::new();
+        self.remote_player_snapshots = VecDeque::new();
+        self.particle_manager = ParticleManager::new();
     }
 }
 
@@ -620,7 +663,8 @@ fn simulate_frame(player: &mut Player, level: &mut Level, input: &UserInput) {
         }
     }
         
-    player.handle_input(actor_manager, input);
+    let flux_field_at_player = net_flux_field_at_point(&player.actor.position, &tilemap.flux_cores);
+    player.handle_input(actor_manager, input, flux_field_at_player);
 
     // Add gravity to 
     for harvester in harvesters.iter_mut() {
@@ -670,8 +714,8 @@ fn simulate_server_frame(player1: &mut Player, input1: &UserInput, player2: &mut
         }
     }
         
-    player1.handle_input(actor_manager, input1);
-    player2.handle_input(actor_manager, input2);
+    player1.handle_input(actor_manager, input1, Vector2::zero());
+    player2.handle_input(actor_manager, input2, Vector2::zero());
 
     // Add gravity to 
     for harvester in harvesters.iter_mut() {
