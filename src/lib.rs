@@ -702,7 +702,6 @@ fn simulate_server_frame(player1: &mut Player, input1: &UserInput, player2: &mut
     for flux_core in &tilemap.flux_cores {
         solids.push(&flux_core.solid);
     }
-    // NOTE: Cloning because usually a level won't contain more than a couple of doors.
     for door in &tilemap.doors {
         if !door.open {
             solids.push(&door.solid);
