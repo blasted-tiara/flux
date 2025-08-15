@@ -60,7 +60,7 @@ use core::fmt;
 use std::ops::{self};
 use std::f32::consts::PI;
 
-use camera::set_xy;
+use camera::*;
 
 const SCREEN_WIDTH: i32 = 512;
 const SCREEN_HEIGHT: i32 = 288;
@@ -77,8 +77,6 @@ struct GameState {
     frames_per_server_update: u32,
     last_fpsu:u32,
     last_processed_tick:usize,
-    camera_center_x: f32,
-    camera_center_y: f32, 
     main_menu_options: Vec<MenuOption>,
     game_flow_state: GameFlowState,
     particle_manager: ParticleManager,
@@ -98,8 +96,6 @@ impl GameState {
             frames_per_server_update: 0,
             last_fpsu: 0,
             last_processed_tick: 0,
-            camera_center_x: SCREEN_WIDTH as f32 / 2.,
-            camera_center_y: SCREEN_HEIGHT as f32 / 2.,
             main_menu_options: get_main_menu_options(),
             game_flow_state: GameFlowState::MainMenu,
             particle_manager: ParticleManager::new(),
@@ -114,10 +110,10 @@ impl GameState {
                 self.handle_main_menu_flow();
             },
             GameFlowState::InGameSingle => {
-                self.handle_in_game_co_op_flow();
+                self.handle_in_game_flow();
             }
             GameFlowState::InGameCoOp => {
-                self.handle_in_game_co_op_flow();
+                self.handle_in_game_flow();
             },
             GameFlowState::WaitingForPlayer2 => {
                 self.handle_waiting_for_player_2_flow();
@@ -129,9 +125,7 @@ impl GameState {
     }
     
     fn handle_waiting_for_player_2_flow(&mut self) {
-        self.camera_center_x = SCREEN_WIDTH as f32 / 2.;
-        self.camera_center_y = SCREEN_HEIGHT as f32 / 2.;
-        set_xy(self.camera_center_x, self.camera_center_y);
+        set_xy(SCREEN_WIDTH as f32 / 2., SCREEN_HEIGHT as f32 / 2.);
 
         if let Some(conn) = FluxGameStateChannel::subscribe("default") { 
             while let Ok(msg) = conn.recv() { 
@@ -161,9 +155,7 @@ impl GameState {
     }
     
     fn handle_credits_flow(&mut self) {
-        self.camera_center_x = SCREEN_WIDTH as f32 / 2.;
-        self.camera_center_y = SCREEN_HEIGHT as f32 / 2.;
-        set_xy(self.camera_center_x, self.camera_center_y);
+        set_xy(SCREEN_WIDTH as f32 / 2., SCREEN_HEIGHT as f32 / 2.);
 
         let gamepad = gamepad::get(0);
         if gamepad.a.just_pressed() || gamepad.b.just_pressed() || gamepad.x.just_pressed() || gamepad.y.just_pressed() || gamepad.start.just_pressed() || gamepad.select.just_pressed() {
@@ -195,9 +187,7 @@ impl GameState {
     }
     
     fn handle_main_menu_flow(&mut self) {
-        self.camera_center_x = SCREEN_WIDTH as f32 / 2.;
-        self.camera_center_y = SCREEN_HEIGHT as f32 / 2.;
-        set_xy(self.camera_center_x, self.camera_center_y);
+        set_xy(SCREEN_WIDTH as f32 / 2., SCREEN_HEIGHT as f32 / 2.);
 
         clear(0x00000000);
         let selected_option = handle_input(&mut self.main_menu_options);
@@ -220,7 +210,7 @@ impl GameState {
         draw_main_menu(&mut self.main_menu_options);
     }
     
-    fn handle_in_game_co_op_flow(&mut self) {
+    fn handle_in_game_flow(&mut self) {
         let gamepad = gamepad::get(0);
         let user_input = UserInput {
             tick: time::tick(),
@@ -332,21 +322,19 @@ impl GameState {
             }
         }
 
-        self.particle_manager.generate_box_of_particles(0, bounding_box);
+        self.particle_manager.generate_box_of_particles(time::tick() as u32 % 2, bounding_box);
         self.particle_manager.update(&self.level_manager.loaded_level.tilemap.flux_cores);
 
         let camera_position = self.level_manager.loaded_level.tilemap.lock_viewport_to_tilemap(
             &Vector2::new(self.local_player.actor.position.x, self.local_player.actor.position.y),
             &Vector2::new(SCREEN_WIDTH as f32, SCREEN_HEIGHT as f32)
         );
-        let new_camera_position_x = lerp(self.camera_center_x as f32, camera_position.x, 0.1);
-        let new_camera_position_y = lerp(self.camera_center_y as f32, camera_position.y, 0.1);
-        self.level_manager.loaded_level.background.draw(Vector2{ x: new_camera_position_x, y: new_camera_position_y });
         
-        //bounding_box.draw_bounding_box();
-        self.camera_center_x = new_camera_position_x;
-        self.camera_center_y = new_camera_position_y;
-        set_xy(self.camera_center_x, self.camera_center_y);
+        pan_xy((camera_position.x as i32, camera_position.y as i32), 40, Easing::EaseOutQuad);
+
+        let screen_bounds = bounds::world();
+        let screen_center = screen_bounds.center();
+        self.level_manager.loaded_level.background.draw(Vector2{ x: screen_center.0 as f32, y: screen_center.1 as f32 });
 
         self.particle_manager.draw();
 
@@ -377,18 +365,20 @@ impl GameState {
             None => {}
         }
         //self.server_player_position.draw(5);
-        self.level_manager.loaded_level.harvesters.iter().for_each(|h| { h.draw(&mut self.level_manager.loaded_level.actor_manager); /* h.draw_bounding_box(); */ } );
+        self.level_manager.loaded_level.harvesters.iter().for_each( |h| {
+            h.draw(&mut self.level_manager.loaded_level.actor_manager);
+            //h.draw_bounding_box();
+        } );
         
         let mut total_flux = 0.;
         for harvester in &mut self.level_manager.loaded_level.harvesters {
             total_flux += harvester.calculate_flux(&mut self.level_manager.loaded_level.actor_manager, &self.level_manager.loaded_level.tilemap.flux_cores);
         }
 
-        let screen_center = Vector2::new(self.camera_center_x as f32, self.camera_center_y as f32);
-        show_total_flux(total_flux, &screen_center);
+        //show_total_flux(total_flux, &Vector2::new(screen_center.0 as f32, screen_center.1 as f32));
         //show_debug_info(self.last_fpsu, &screen_center);
         
-        //draw_hud(self.camera_center_x, self.camera_center_y);
+        draw_hud(screen_center.0 as f32, screen_center.1 as f32, total_flux);
         
         if !audio::is_playing("bg-music-nothing") {
             audio::play("bg-music-nothing");
