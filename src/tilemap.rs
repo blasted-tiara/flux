@@ -80,7 +80,18 @@ impl TileMap {
                             (j as f32 - 0.5) * tile_size as f32,
                             tile_size as f32 / 1.3,
                             tile_size as f32 * 3.,
-                            false
+                            false,
+                        )
+                    );
+                } else if doors_tilemap[j * width + i] == 2 {
+                    doors.push(
+                        Door::new(
+                            1,
+                            (i as f32 + 0.5) * tile_size as f32,
+                            (j as f32 - 0.5) * tile_size as f32,
+                            tile_size as f32 / 1.3,
+                            tile_size as f32 * 3.,
+                            false,
                         )
                     );
                 }
