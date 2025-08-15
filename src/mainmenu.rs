@@ -62,7 +62,7 @@ pub fn get_main_menu_options() -> Vec<MenuOption> {
     let mut main_menu_options = Vec::new();
     
     let x_coord = 50;
-    let y_coord = 110;
+    let y_coord = 60;
     let option_height = 50;
     let options = vec!["Start", "Co-Op", "Credits"];
     for (idx, option) in options.iter().enumerate() {

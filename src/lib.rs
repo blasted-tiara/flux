@@ -189,7 +189,12 @@ impl GameState {
     fn handle_main_menu_flow(&mut self) {
         set_xy(SCREEN_WIDTH as f32 / 2., SCREEN_HEIGHT as f32 / 2.);
 
-        clear(0x00000000);
+        sprite!(
+            "UI_MainMenuScreen",
+            x = 0,
+            y = 0,
+            fixed = true,
+        );
         let selected_option = handle_input(&mut self.main_menu_options);
         match selected_option {
             Some(text) => {
