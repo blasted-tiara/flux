@@ -29,12 +29,21 @@ impl LevelManager {
                 self.current_level = Self::get_next_level(level_name.clone());
                 match &self.current_level {
                     Some(new_level_name) => {
-                        self.loaded_level = Self::construct_level(new_level_name.clone());
+                        self.loaded_level = Self::construct_level(&new_level_name);
                     },
                     None => { }
                 }
             },
             None => { }
+        }
+    }
+    
+    pub fn reload_current_level(&mut self) {
+        match &self.current_level {
+            Some(level_name) => {
+                self.loaded_level = Self::construct_level(level_name);
+            },
+            None => {},
         }
     }
 
@@ -45,7 +54,7 @@ impl LevelManager {
         }        
     }
 
-    fn construct_level(level_name: LevelName) -> Level {
+    fn construct_level(level_name: &LevelName) -> Level {
         match level_name {
             LevelName::Level1 => construct_level_1(),
             LevelName::Level2 => construct_level_2(),

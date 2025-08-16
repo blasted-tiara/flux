@@ -65,6 +65,7 @@ use camera::*;
 const SCREEN_WIDTH: i32 = 512;
 const SCREEN_HEIGHT: i32 = 288;
 const FLUX_THRESHOLD: f32 = 400.;
+const DEGAUSS_FRAMES: u32 = 120;
  
 #[turbo::game]
 struct GameState {
@@ -80,6 +81,7 @@ struct GameState {
     main_menu_options: Vec<MenuOption>,
     game_flow_state: GameFlowState,
     particle_manager: ParticleManager,
+    degauss_shader_counter: u32,
 }
 
 impl GameState {
@@ -99,6 +101,7 @@ impl GameState {
             main_menu_options: get_main_menu_options(),
             game_flow_state: GameFlowState::MainMenu,
             particle_manager: ParticleManager::new(),
+            degauss_shader_counter: 0,
         }
     }
     
@@ -120,6 +123,18 @@ impl GameState {
             },
             GameFlowState::Credits => {
                 self.handle_credits_flow();
+            }
+        }
+
+        if self.degauss_shader_counter > 0 {
+            self.write_tick_to_pixel();
+            if shaders::get() != "degauss-shader" {
+                shaders::set("degauss-shader");
+            }
+            self.degauss_shader_counter -= 1;
+        } else {
+            if shaders::get() != "crt-monitor-shader" {
+                shaders::set("crt-monitor-shader" );
             }
         }
     }
@@ -387,7 +402,12 @@ impl GameState {
         //show_debug_info(self.last_fpsu, &screen_center);
         
         draw_hud(screen_center.0 as f32, screen_center.1 as f32, total_flux);
-        draw_shader_distortion_parameter_pixel(&self.local_player.get_position(), &self.level_manager.loaded_level.tilemap.flux_cores);
+        let net_flux_field = net_flux_field_at_point(&self.local_player.get_position(), &self.level_manager.loaded_level.tilemap.flux_cores).length();
+        draw_shader_distortion_parameter_pixel(net_flux_field);
+        if net_flux_field > 30. {
+            self.restart_level();
+            self.degauss_shader_counter = DEGAUSS_FRAMES;
+        }
         
         if !audio::is_playing("bg-music-nothing") {
             audio::play("bg-music-nothing");
@@ -414,6 +434,12 @@ impl GameState {
         self.level_manager = level_manager;
         self.local_player = Player::new(local_player_position.x, local_player_position.y);
     }
+    
+    fn restart_level(&mut self) {
+        let local_player_position = self.level_manager.loaded_level.player1_start_position.clone();
+        self.local_player = Player::new(local_player_position.x, local_player_position.y);
+        self.level_manager.reload_current_level();
+    }
 
     fn load_next_level(&mut self) {
         self.level_manager.load_next_level();
@@ -424,6 +450,22 @@ impl GameState {
         self.remote_player_snapshots = VecDeque::new();
         self.particle_manager = ParticleManager::new();
     }
+
+    // This is needed for the degauss shader
+    pub fn write_tick_to_pixel(&self) {
+        let degauss_frame = DEGAUSS_FRAMES - self.degauss_shader_counter; 
+        let color = ((degauss_frame as u32) << 16) | 0x000000ff;
+
+        rect!(
+            color = color,
+            w = 1,
+            h = 1,
+            x = 0,
+            y = 0,
+            fixed = true,
+        );
+    }
+
 }
 
 fn smooth_position(position_snapshots: Vec<Vector2>) -> Vector2 {
