@@ -48,13 +48,15 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let time_seconds = f32(global.tick) / 60.0;
     let wave = sin(uv.y * 120.0 + time_seconds * 5.0) * 0.0005;
     uv.x += wave;
+    
+    let pixel_f: vec4<f32> = textureLoad(t_canvas, vec2<i32>(0, 0), 0);
+    let shift = pixel_f.g * 255.0 * 0.003;
 
     // Small random jitter per line
     let jitter = (rand2(vec2<f32>(floor(uv.y * 240.0), time_seconds)) - 0.5) * 0.0005;
     uv.x += jitter;
     
         // Chromatic aberration: sample RGB separately
-    let shift = 0.001;
     let colR = textureSample(t_canvas, s_canvas, uv + vec2<f32>( shift, 0.0)).r;
     let colG = textureSample(t_canvas, s_canvas, uv).g;
     let colB = textureSample(t_canvas, s_canvas, uv + vec2<f32>(-shift, 0.0)).b;
@@ -62,12 +64,12 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     var color = vec3<f32>(colR, colG, colB);
 
     // Scanlines
-    let scanline = 0.9 + 0.1 * sin(uv.y * 500.0);
+    let scanline = 0.97 + 0.03 * sin(uv.y * 500.0);
     color *= scanline;
 
     // Slight desaturation
     let gray = dot(color, vec3<f32>(0.299, 0.587, 0.114));
-    color = mix(vec3<f32>(gray), color, 0.9);
+    color = mix(vec3<f32>(gray), color, 0.98);
 
     return vec4<f32>(color, 1.0);
 }

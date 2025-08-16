@@ -152,6 +152,7 @@ impl GameState {
             color = 0x00ffffff,
             font = "large",
         );
+        draw_menu_distortion_parameter_pixel();
     }
     
     fn handle_credits_flow(&mut self) {
@@ -184,6 +185,7 @@ impl GameState {
             color = 0x00ffffff,
             font = "large",
         );
+        draw_menu_distortion_parameter_pixel();
     }
     
     fn handle_main_menu_flow(&mut self) {
@@ -213,6 +215,7 @@ impl GameState {
             None => {},
         }
         draw_main_menu(&mut self.main_menu_options);
+        draw_menu_distortion_parameter_pixel();
     }
     
     fn handle_in_game_flow(&mut self) {
@@ -384,6 +387,7 @@ impl GameState {
         //show_debug_info(self.last_fpsu, &screen_center);
         
         draw_hud(screen_center.0 as f32, screen_center.1 as f32, total_flux);
+        draw_shader_distortion_parameter_pixel(&self.local_player.get_position(), &self.level_manager.loaded_level.tilemap.flux_cores);
         
         if !audio::is_playing("bg-music-nothing") {
             audio::play("bg-music-nothing");

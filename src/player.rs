@@ -1,3 +1,5 @@
+use std::net;
+
 use crate::*;
 
 #[turbo::serialize]
@@ -265,6 +267,31 @@ impl Player {
             y = position.y as i32 - 28,
         );
     }
+}
+
+pub fn draw_shader_distortion_parameter_pixel(position: &Vector2, flux_cores: &Vec<FluxCore>) {
+    let net_flux_field = net_flux_field_at_point(position, flux_cores).length();
+    let color = ((net_flux_field as u32) << 16) | 0x000000ff;
+
+    rect!(
+        color = color,
+        w = 1,
+        h = 1,
+        x = 0,
+        y = 0,
+        fixed = true,
+    );
+}
+
+pub fn draw_menu_distortion_parameter_pixel() {
+    rect!(
+        color = 0x000000ff,
+        w = 1,
+        h = 1,
+        x = 0,
+        y = 0,
+        fixed = true,
+    );
 }
 
 #[turbo::serialize]
