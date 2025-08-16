@@ -50,10 +50,10 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     uv.x += wave;
     
     let pixel_f: vec4<f32> = textureLoad(t_canvas, vec2<i32>(0, 0), 0);
-    let shift = pixel_f.g * 255.0 * 0.003;
+    let shift = pixel_f.g * 255.0 * 0.0025;
 
     // Small random jitter per line
-    let jitter = (rand2(vec2<f32>(floor(uv.y * 240.0), time_seconds)) - 0.5) * 0.0005;
+    let jitter = (rand2(vec2<f32>(floor(uv.y * 240.0), time_seconds)) - 0.5) * shift * 0.5;
     uv.x += jitter;
     
         // Chromatic aberration: sample RGB separately
