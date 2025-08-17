@@ -124,7 +124,7 @@ impl Particle {
     }
     
     fn draw(&self) {
-        // NOTE: This can be optimized to 
+        // NOTE: This can be optimized to only generate the new color when creating the point
         let mut i = 1;
         let mut alpha = 0.6;
         for position in &self.positions {
