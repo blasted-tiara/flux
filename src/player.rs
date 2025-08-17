@@ -1,5 +1,10 @@
 use crate::*;
 
+const DASH_TIMER: u32 = 6;
+const DASH_SPEED_X: f32 = 12.;
+const DASH_SPEED_Y: f32 = 8.;
+const DASH_FLUX_THRESHOLD: f32 = 10.;
+
 #[turbo::serialize]
 pub struct Player {
     pub id: String,
@@ -19,7 +24,8 @@ pub struct Player {
     movement_status: MovementStatus,
     try_pick_item: bool,
     picked_item: Option<ActorId>,
-    used_field_jump: bool,
+    used_dash: bool,
+    dash_timer: u32,
 }
 
 impl Player {
@@ -46,7 +52,8 @@ impl Player {
             movement_status: MovementStatus::IsFalling,
             try_pick_item: false,
             picked_item: Option::None,
-            used_field_jump: false,
+            used_dash: false,
+            dash_timer: 0,
         }
     }
    
@@ -54,9 +61,11 @@ impl Player {
         match self.movement_status {
             MovementStatus::IsLanded => {
                 if user_input.jump_just_pressed || self.jump_buffer_timer > 0 {
+                    // Add jump force
                     self.velocity.y = -self.jump_force;
                     self.movement_status = MovementStatus::InJump;
 
+                    // Set-up jump animation for idle and running animations
                     if self.velocity.x.abs() > 0.1 {
                         let anim = animation::get("player_character_walk");
                         anim.use_sprite("ChipmunckCharacter_jump");
@@ -73,22 +82,59 @@ impl Player {
                 }
             },
             MovementStatus::InJump => {
-                if !self.used_field_jump && user_input.jump_just_pressed {
-                    self.velocity += flux_field * 1.0;
-                    self.used_field_jump = true;
+                if !self.used_dash && user_input.jump_just_pressed {
+                    if flux_field.length() > DASH_FLUX_THRESHOLD {
+                        self.dash_timer = DASH_TIMER;
+                        self.movement_status = MovementStatus::InDash;
+                    }
                 }
                 if self.velocity.y > 0. {
                     self.movement_status = MovementStatus::IsFalling;
                 }
             },
             MovementStatus::IsFalling => {
-                if self.coyote_timer > 0 && user_input.jump_just_pressed {
-                    self.velocity.y = -self.jump_force;
-                    self.movement_status = MovementStatus::InJump;
-                    audio::play("jump-sfx-nothing");
-                } else if user_input.jump_just_pressed {
-                    self.jump_buffer_timer = self.jump_buffer_timer_duration;
+                if user_input.jump_just_pressed {
+                    if self.coyote_timer > 0 {
+                        // If coyote timer is active and jump is pressed, do a regular jump
+                        self.velocity.y = -self.jump_force;
+                        self.movement_status = MovementStatus::InJump;
+                        audio::play("jump-sfx-nothing");
+                    } else {
+                        if self.used_dash {
+                            // If dash is already used, buffer jump
+                            self.jump_buffer_timer = self.jump_buffer_timer_duration;
+                        } else {
+                            // Otherwise, DASH!
+                            
+                            if flux_field.length() > DASH_FLUX_THRESHOLD {
+                                self.dash_timer = DASH_TIMER;
+                                self.movement_status = MovementStatus::InDash;
+                            }
+                        }
+                    }
                 }
+            }
+            MovementStatus::InDash => {
+                if self.dash_timer > 0 {
+                    if user_input.up_pressed {
+                        self.velocity = Vector2::new(0., -DASH_SPEED_Y);
+                    } else if user_input.down_pressed {
+                        self.velocity = Vector2::new(0., DASH_SPEED_Y);
+                    } else if user_input.right_pressed {
+                        self.velocity = Vector2::new(DASH_SPEED_X, 0.);
+                    } else if user_input.left_pressed {
+                        self.velocity = Vector2::new(-DASH_SPEED_X, 0.);
+                    } else {
+                        self.dash_timer = 0;
+                        return;
+                    }
+                    self.dash_timer -= 1;
+                    return;
+                } else {
+                    self.movement_status = MovementStatus::IsFalling;
+                    self.used_dash = true;
+                }
+
             }
         }
 
@@ -185,7 +231,7 @@ impl Player {
         let on_y_collision = |collision_happened: bool| {
             if collision_happened {
                 if self.velocity.y >= 0.0 {
-                    self.used_field_jump = false;
+                    self.used_dash = false;
                     if self.movement_status == MovementStatus::IsFalling {
                         if self.velocity.x.abs() > 0.1 {
                             let anim = animation::get("player_character_walk");
@@ -327,6 +373,7 @@ enum MovementStatus {
     IsLanded,
     IsFalling,
     InJump,
+    InDash,
 }
 
 impl std::fmt::Display for MovementStatus {
@@ -335,6 +382,7 @@ impl std::fmt::Display for MovementStatus {
             MovementStatus::InJump => write!(f, "InJump"),
             MovementStatus::IsFalling => write!(f, "IsFalling"),
             MovementStatus::IsLanded => write!(f, "IsLanded"),
+            MovementStatus::InDash => write!(f, "InDash"),
         }
     }
 }

@@ -237,10 +237,12 @@ impl GameState {
         let gamepad = gamepad::get(0);
         let user_input = UserInput {
             tick: time::tick(),
-            jump_just_pressed: gamepad.up.just_pressed() || gamepad.start.just_pressed(),
-            jump_pressed: gamepad.up.pressed() || gamepad.start.pressed(),
+            jump_just_pressed: gamepad.start.just_pressed(),
+            jump_pressed: gamepad.start.pressed(),
             left_pressed: gamepad.left.pressed(),
             right_pressed: gamepad.right.pressed(),
+            up_pressed: gamepad.up.pressed(),
+            down_pressed: gamepad.down.pressed(),
             a_just_pressed: gamepad.a.just_pressed(),
         };
         
@@ -497,6 +499,8 @@ pub struct UserInput {
     jump_just_pressed: bool,
     left_pressed: bool,
     right_pressed: bool,
+    up_pressed: bool,
+    down_pressed: bool,
     a_just_pressed: bool,
 }
 
@@ -508,6 +512,8 @@ impl UserInput {
             jump_pressed: false,
             left_pressed: false,
             right_pressed: false,
+            up_pressed: false,
+            down_pressed: false,
             a_just_pressed: false,
         }
     }
