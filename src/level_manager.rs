@@ -17,9 +17,10 @@ pub struct LevelManager {
 
 impl LevelManager {
     pub fn new() -> Self {
+        let level_name = LevelName::Level1;
         Self {
-            current_level: Some(LevelName::Level1),
-            loaded_level: construct_level_1(),
+            loaded_level: Self::construct_level(&level_name),
+            current_level: Some(level_name),
         }
     }
 
@@ -50,7 +51,8 @@ impl LevelManager {
     fn get_next_level(level_name: LevelName) -> Option<LevelName> {
         match level_name {
             LevelName::Level1 => Some(LevelName::Level2),
-            LevelName::Level2 => None,
+            LevelName::Level2 => Some(LevelName::Level3),
+            LevelName::Level3 => None,
         }        
     }
 
@@ -58,6 +60,7 @@ impl LevelManager {
         match level_name {
             LevelName::Level1 => construct_level_1(),
             LevelName::Level2 => construct_level_2(),
+            LevelName::Level3 => construct_level_3(),
         }
     }
 }
@@ -66,4 +69,5 @@ impl LevelManager {
 pub enum LevelName {
     Level1,
     Level2,
+    Level3,
 }
