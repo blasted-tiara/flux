@@ -1,5 +1,3 @@
-use std::net;
-
 use crate::*;
 
 #[turbo::serialize]
@@ -58,6 +56,19 @@ impl Player {
                 if user_input.jump_just_pressed || self.jump_buffer_timer > 0 {
                     self.velocity.y = -self.jump_force;
                     self.movement_status = MovementStatus::InJump;
+
+                    if self.velocity.x.abs() > 0.1 {
+                        let anim = animation::get("player_character_walk");
+                        anim.use_sprite("ChipmunckCharacter_jump");
+                        anim.set_speed(2.0);
+                        anim.set_repeat(1);
+                    } else {
+                        let anim = animation::get("player_character_idle");
+                        anim.use_sprite("ChipmunckCharacter_jump");
+                        anim.set_speed(2.0);
+                        anim.set_repeat(1);
+                    }
+
                     audio::play("jump-sfx-nothing");
                 }
             },
@@ -175,7 +186,21 @@ impl Player {
             if collision_happened {
                 if self.velocity.y >= 0.0 {
                     self.used_field_jump = false;
-                    self.movement_status = MovementStatus::IsLanded;
+                    if self.movement_status == MovementStatus::IsFalling {
+                        if self.velocity.x.abs() > 0.1 {
+                            let anim = animation::get("player_character_walk");
+                            anim.use_sprite("ChipmunckCharacter_land");
+                            anim.set_speed(2.0);
+                            anim.set_repeat(1);
+                        } else {
+                            let anim = animation::get("player_character_idle");
+                            anim.use_sprite("ChipmunckCharacter_land");
+                            anim.set_speed(2.0);
+                            anim.set_repeat(1);
+                        }
+                        self.movement_status = MovementStatus::IsLanded;
+                    }
+
                 }
                 self.velocity.y = 0.;
             } else {
@@ -235,7 +260,8 @@ impl Player {
             let x_offset = if self.is_facing_left { 5 } else { 10 };
             let y_offset = 0;
             sprite!(
-                "ChipmunckCharacter_walk",
+                animation_key = "player_character_walk",
+                default_sprite = "ChipmunckCharacter_walk",
                 x = left as i32 - x_offset,
                 y = top as i32 - y_offset,
                 flip_x = self.is_facing_left,
@@ -244,7 +270,8 @@ impl Player {
             let x_offset = if self.is_facing_left { 5 } else { 10 };
             let y_offset = 0;
             sprite!(
-                "ChipmunckCharacter_idle_36",
+                animation_key = "player_character_idle",
+                default_sprite = "ChipmunckCharacter_idle_36",
                 x = left as i32 - x_offset,
                 y = top as i32 - y_offset,
                 flip_x = self.is_facing_left,
@@ -300,4 +327,14 @@ enum MovementStatus {
     IsLanded,
     IsFalling,
     InJump,
+}
+
+impl std::fmt::Display for MovementStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MovementStatus::InJump => write!(f, "InJump"),
+            MovementStatus::IsFalling => write!(f, "IsFalling"),
+            MovementStatus::IsLanded => write!(f, "IsLanded"),
+        }
+    }
 }
