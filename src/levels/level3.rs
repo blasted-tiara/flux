@@ -64,7 +64,7 @@ pub fn construct_level_3() -> Level {
         time_period: 0.0,
     });
     flux_cores_properties.insert(3, FluxCoreData {
-        amplitude: 4700.,
+        amplitude: 4600.,
         core_type: FluxCoreType::Radial,
         time_offset: 0.0,
         time_period: 0.0,

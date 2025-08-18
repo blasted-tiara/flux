@@ -116,10 +116,8 @@ impl Player {
             }
             MovementStatus::InDash => {
                 if self.dash_timer > 0 {
-                    if user_input.up_pressed {
+                    if user_input.jump_pressed {
                         self.velocity = Vector2::new(0., -DASH_SPEED_Y);
-                    } else if user_input.down_pressed {
-                        self.velocity = Vector2::new(0., DASH_SPEED_Y);
                     } else if user_input.right_pressed {
                         self.velocity = Vector2::new(DASH_SPEED_X, 0.);
                     } else if user_input.left_pressed {

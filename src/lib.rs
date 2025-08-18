@@ -237,8 +237,8 @@ impl GameState {
         let gamepad = gamepad::get(0);
         let user_input = UserInput {
             tick: time::tick(),
-            jump_just_pressed: gamepad.start.just_pressed(),
-            jump_pressed: gamepad.start.pressed(),
+            jump_just_pressed: gamepad.b.just_pressed(),
+            jump_pressed: gamepad.b.pressed(),
             left_pressed: gamepad.left.pressed(),
             right_pressed: gamepad.right.pressed(),
             up_pressed: gamepad.up.pressed(),
