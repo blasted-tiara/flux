@@ -26,6 +26,7 @@ pub struct Player {
     picked_item: Option<ActorId>,
     used_dash: bool,
     dash_timer: u32,
+    dash_force: Vector2,
 }
 
 impl Player {
@@ -54,6 +55,7 @@ impl Player {
             picked_item: Option::None,
             used_dash: false,
             dash_timer: 0,
+            dash_force: Vector2::zero(),
         }
     }
    
@@ -115,17 +117,20 @@ impl Player {
                 }
             }
             MovementStatus::InDash => {
-                if self.dash_timer > 0 {
-                    if user_input.jump_pressed {
-                        self.velocity = Vector2::new(0., -DASH_SPEED_Y);
-                    } else if user_input.right_pressed {
-                        self.velocity = Vector2::new(DASH_SPEED_X, 0.);
+                if self.dash_timer == DASH_TIMER {
+                    if user_input.right_pressed {
+                        self.dash_force = Vector2::new(DASH_SPEED_X, 0.);
                     } else if user_input.left_pressed {
-                        self.velocity = Vector2::new(-DASH_SPEED_X, 0.);
+                        self.dash_force = Vector2::new(-DASH_SPEED_X, 0.);
+                    } else if user_input.jump_pressed {
+                        self.dash_force = Vector2::new(0., -DASH_SPEED_Y);
                     } else {
                         self.dash_timer = 0;
                         return;
                     }
+                }
+                if self.dash_timer > 0 {
+                    self.velocity = self.dash_force;
                     self.dash_timer -= 1;
                     return;
                 } else {
