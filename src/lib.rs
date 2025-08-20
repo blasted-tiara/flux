@@ -56,6 +56,8 @@ use main_menu::*;
 mod hud;
 use hud::*;
 
+mod juice_particles;
+
 use core::fmt;
 use std::ops::{self};
 use std::f32::consts::PI;
@@ -81,13 +83,16 @@ struct GameState {
     main_menu_options: Vec<MenuOption>,
     game_flow_state: GameFlowState,
     particle_manager: ParticleManager,
+    juice_particle_manager: juice_particles::ParticleManager,
     degauss_shader_counter: u32,
+    hud: Hud,
 }
 
 impl GameState {
     pub fn new() -> Self {
         let level_manager =  LevelManager::new();
         let local_player_position = level_manager.loaded_level.player1_start_position.clone();
+        let required_flux = level_manager.loaded_level.required_flux;
         Self {
             level_manager,
             local_player: Player::new(local_player_position.x, local_player_position.y),
@@ -101,7 +106,9 @@ impl GameState {
             main_menu_options: get_main_menu_options(),
             game_flow_state: GameFlowState::MainMenu,
             particle_manager: ParticleManager::new(),
+            juice_particle_manager: juice_particles::ParticleManager::new(),
             degauss_shader_counter: 0,
+            hud: Hud::new(),
         }
     }
     
@@ -399,11 +406,13 @@ impl GameState {
         for harvester in &mut self.level_manager.loaded_level.harvesters {
             total_flux += harvester.calculate_flux(&mut self.level_manager.loaded_level.actor_manager, &self.level_manager.loaded_level.tilemap.flux_cores);
         }
+        
+        self.hud.update(total_flux, self.level_manager.loaded_level.required_flux);
 
         //show_total_flux(total_flux, &Vector2::new(screen_center.0 as f32, screen_center.1 as f32));
         //show_debug_info(self.last_fpsu, &screen_center);
         
-        draw_hud(total_flux, self.level_manager.loaded_level.required_flux);
+        self.hud.draw();
         let net_flux_field = net_flux_field_at_point(&self.local_player.get_position(), &self.level_manager.loaded_level.tilemap.flux_cores).length();
         draw_shader_distortion_parameter_pixel(net_flux_field);
         if net_flux_field > 30. {
