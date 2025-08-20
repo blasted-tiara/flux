@@ -1,8 +1,6 @@
 use crate::*;
 
-const FLUX_PER_UNIT: f32 = 200.;
-
-pub fn draw_hud(total_flux: f32) {
+pub fn draw_hud(total_flux: f32, required_flux: f32) {
     sprite!(
         "energybar",
         x = 0, 
@@ -30,10 +28,23 @@ pub fn draw_hud(total_flux: f32) {
 
     text!(
         &units_of_flux,
-        x = 30 - (units_of_flux.len() as i32) * 5,
-        y = 23,
+        x = 31 - (units_of_flux.len() as i32) * 5,
+        y = 24,
         color = 0xffffffff,
         font = "large",
         fixed = true,
     );
+    
+    let mut required_flux_text = String::new();
+    required_flux_text.push_str(&(required_flux as i32 / FLUX_PER_UNIT as i32).to_string());
+
+    text!(
+        &required_flux_text,
+        x = 420 - (required_flux_text.len() as i32) * 5,
+        y = 15,
+        color = 0x2998c1ff,
+        font = "medium",
+        fixed = true,
+    );
+    
 }

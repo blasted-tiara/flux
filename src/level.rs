@@ -8,4 +8,5 @@ pub struct Level {
     pub player1_start_position: Vector2,
     pub player2_start_position: Vector2,
     pub background: Background,
+    pub required_flux: f32,
 }

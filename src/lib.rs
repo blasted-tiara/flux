@@ -64,9 +64,9 @@ use camera::*;
 
 const SCREEN_WIDTH: i32 = 512;
 const SCREEN_HEIGHT: i32 = 288;
-const FLUX_THRESHOLD: f32 = 400.;
 const DEGAUSS_FRAMES: u32 = 120;
- 
+const FLUX_PER_UNIT: f32 = 200.;
+
 #[turbo::game]
 struct GameState {
     level_manager: LevelManager,
@@ -403,7 +403,7 @@ impl GameState {
         //show_total_flux(total_flux, &Vector2::new(screen_center.0 as f32, screen_center.1 as f32));
         //show_debug_info(self.last_fpsu, &screen_center);
         
-        draw_hud(total_flux);
+        draw_hud(total_flux, self.level_manager.loaded_level.required_flux);
         let net_flux_field = net_flux_field_at_point(&self.local_player.get_position(), &self.level_manager.loaded_level.tilemap.flux_cores).length();
         draw_shader_distortion_parameter_pixel(net_flux_field);
         if net_flux_field > 30. {
@@ -694,6 +694,7 @@ fn simulate_frame(player: &mut Player, level: &mut Level, input: &UserInput) {
         player1_start_position: _,
         player2_start_position: _,
         background: _,
+        required_flux,
     } = level;
 
     let mut solids: Vec<&Solid> = vec![];
@@ -732,7 +733,7 @@ fn simulate_frame(player: &mut Player, level: &mut Level, input: &UserInput) {
     
     for door in &mut level.tilemap.doors {
         if door.id == 0 {
-            door.open = total_flux >= FLUX_THRESHOLD;
+            door.open = total_flux >= *required_flux;
         }
     }
 }
@@ -745,6 +746,7 @@ fn simulate_server_frame(player1: &mut Player, input1: &UserInput, player2: &mut
         player1_start_position: _,
         player2_start_position: _,
         background: _,
+        required_flux,
     } = level;
 
     let mut solids: Vec<&Solid> = vec![];
@@ -784,7 +786,7 @@ fn simulate_server_frame(player1: &mut Player, input1: &UserInput, player2: &mut
     
     for door in &mut level.tilemap.doors {
         if door.id == 0 {
-            door.open = total_flux >= FLUX_THRESHOLD;
+            door.open = total_flux >= *required_flux;
         }
     }
 }

@@ -6,6 +6,7 @@ pub fn construct_level_1() -> Level {
     let height = 18;
     let width = 50;
     let tile_size = 16;
+    let required_flux = 2. * FLUX_PER_UNIT;
 
     let terrain_tilemap: [u8; 900] = [
         5, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 5, 5, 5, 5, 5, 5, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 5,
@@ -171,5 +172,6 @@ pub fn construct_level_1() -> Level {
         player1_start_position,
         player2_start_position,
         background,
+        required_flux,
     }
 }
