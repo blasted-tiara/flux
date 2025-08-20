@@ -28,10 +28,10 @@ pub fn draw_hud(total_flux: f32, required_flux: f32) {
 
     text!(
         &units_of_flux,
-        x = 31 - (units_of_flux.len() as i32) * 5,
-        y = 24,
+        x = 31 - (units_of_flux.len() as i32) * 6,
+        y = 19,
         color = 0xffffffff,
-        font = "large",
+        font = "VCRFont",
         fixed = true,
     );
     
