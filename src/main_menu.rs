@@ -2,10 +2,21 @@ use crate::*;
 
 pub fn draw_main_menu(main_menu_options: &mut Vec<MenuOption>) {
     sprite!("title-screen");
+    sprite!(
+        "logo",
+        x = 112,
+        y = 50,
+    );
 
     for menu_option in main_menu_options {
         menu_option.draw();
     }
+    
+    sprite!(
+        "acornr",
+        x = 166,
+        y = 180,
+    );
 }
 
 #[turbo::serialize]
@@ -54,17 +65,17 @@ impl MenuOption {
         } else {
             sprite!("menu-option", x = self.position_x, y = self.position_y);
         }
-        text!(&self.text, x = self.position_x + 15, y = self.position_y + 18, font = "large");
+        text!(&self.text, x = self.position_x + 110 - self.text.len() as i32 * 4, y = self.position_y + 6, font = "large");
     }
 }
 
 pub fn get_main_menu_options() -> Vec<MenuOption> {
     let mut main_menu_options = Vec::new();
     
-    let x_coord = 50;
-    let y_coord = 60;
-    let option_height = 50;
-    let options = vec!["Start", "Co-Op", "Credits"];
+    let x_coord = 63;
+    let y_coord = 90;
+    let option_height = 30;
+    let options = vec!["START", "Co-Op", "Credits"];
     for (idx, option) in options.iter().enumerate() {
         main_menu_options.push(MenuOption::new(String::from(*option), x_coord, y_coord + option_height * idx as i32, idx == 0));
     }

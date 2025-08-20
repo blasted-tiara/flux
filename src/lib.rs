@@ -215,7 +215,7 @@ impl GameState {
         let selected_option = handle_input(&mut self.main_menu_options);
         match selected_option {
             Some(text) => {
-                if text == "Start" {
+                if text == "START" {
                     self.game_flow_state = GameFlowState::InGameSingle;
                     self.reload_game();
                     return;
