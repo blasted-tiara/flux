@@ -64,6 +64,8 @@ use std::f32::consts::PI;
 
 use camera::*;
 
+use crate::juice_particles::{BurstConfig, BurstSource, Shape};
+
 const SCREEN_WIDTH: i32 = 512;
 const SCREEN_HEIGHT: i32 = 288;
 const DEGAUSS_FRAMES: u32 = 120;
@@ -83,7 +85,6 @@ struct GameState {
     main_menu_options: Vec<MenuOption>,
     game_flow_state: GameFlowState,
     particle_manager: ParticleManager,
-    juice_particle_manager: juice_particles::ParticleManager,
     degauss_shader_counter: u32,
     hud: Hud,
 }
@@ -106,7 +107,6 @@ impl GameState {
             main_menu_options: get_main_menu_options(),
             game_flow_state: GameFlowState::MainMenu,
             particle_manager: ParticleManager::new(),
-            juice_particle_manager: juice_particles::ParticleManager::new(),
             degauss_shader_counter: 0,
             hud: Hud::new(),
         }
@@ -357,6 +357,8 @@ impl GameState {
         self.particle_manager.generate_box_of_particles(time::tick() as u32 % 2, bounding_box);
         self.particle_manager.update(&self.level_manager.loaded_level.tilemap.flux_cores);
 
+        self.level_manager.loaded_level.juice_particle_manager.update();
+
         let camera_position = self.level_manager.loaded_level.tilemap.lock_viewport_to_tilemap(
             &Vector2::new(self.local_player.actor.position.x, self.local_player.actor.position.y),
             &Vector2::new(SCREEN_WIDTH as f32, SCREEN_HEIGHT as f32)
@@ -369,6 +371,7 @@ impl GameState {
         self.level_manager.loaded_level.background.draw(Vector2{ x: screen_center.0 as f32, y: screen_center.1 as f32 });
 
         self.particle_manager.draw();
+        self.level_manager.loaded_level.juice_particle_manager.draw();
 
         //self.level.tilemap.draw_flux_field();
         for t in &self.level_manager.loaded_level.tilemap.tiles {
@@ -704,6 +707,7 @@ fn simulate_frame(player: &mut Player, level: &mut Level, input: &UserInput) {
         player2_start_position: _,
         background: _,
         required_flux,
+        juice_particle_manager,
     } = level;
 
     let mut solids: Vec<&Solid> = vec![];
@@ -721,7 +725,7 @@ fn simulate_frame(player: &mut Player, level: &mut Level, input: &UserInput) {
     }
         
     let flux_field_at_player = net_flux_field_at_point(&player.actor.position, &tilemap.flux_cores);
-    player.handle_input(actor_manager, input, flux_field_at_player);
+    player.handle_input(actor_manager, juice_particle_manager, input, flux_field_at_player);
 
     // Add gravity to 
     for harvester in harvesters.iter_mut() {
@@ -756,6 +760,7 @@ fn simulate_server_frame(player1: &mut Player, input1: &UserInput, player2: &mut
         player2_start_position: _,
         background: _,
         required_flux,
+        juice_particle_manager,
     } = level;
 
     let mut solids: Vec<&Solid> = vec![];
@@ -771,8 +776,8 @@ fn simulate_server_frame(player1: &mut Player, input1: &UserInput, player2: &mut
         }
     }
         
-    player1.handle_input(actor_manager, input1, Vector2::zero());
-    player2.handle_input(actor_manager, input2, Vector2::zero());
+    player1.handle_input(actor_manager, juice_particle_manager, input1, Vector2::zero());
+    player2.handle_input(actor_manager, juice_particle_manager, input2, Vector2::zero());
 
     // Add gravity to 
     for harvester in harvesters.iter_mut() {

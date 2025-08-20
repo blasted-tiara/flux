@@ -173,5 +173,6 @@ pub fn construct_level_1() -> Level {
         player2_start_position,
         background,
         required_flux,
+        juice_particle_manager: juice_particles::ParticleManager::new(),
     }
 }

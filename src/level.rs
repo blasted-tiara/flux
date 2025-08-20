@@ -9,4 +9,5 @@ pub struct Level {
     pub player2_start_position: Vector2,
     pub background: Background,
     pub required_flux: f32,
+    pub juice_particle_manager: juice_particles::ParticleManager,
 }

@@ -22,11 +22,13 @@ pub struct Player {
     coyote_timer_duration: i32,
     jump_buffer_timer_duration: i32,
     movement_status: MovementStatus,
+    has_landed: bool,
     try_pick_item: bool,
     picked_item: Option<ActorId>,
     used_dash: bool,
     dash_timer: u32,
     dash_force: Vector2,
+    dash_direction: DashDirection,
 }
 
 impl Player {
@@ -51,21 +53,30 @@ impl Player {
             coyote_timer_duration: 3,
             jump_buffer_timer_duration: 8,
             movement_status: MovementStatus::IsFalling,
+            has_landed: false,
             try_pick_item: false,
             picked_item: Option::None,
             used_dash: false,
             dash_timer: 0,
             dash_force: Vector2::zero(),
+            dash_direction: DashDirection::Up,
         }
     }
    
-    pub fn handle_input(&mut self, actor_manager: &mut ActorManager, user_input: &UserInput, flux_field: Vector2) {
+    pub fn handle_input(
+        &mut self,
+        actor_manager: &mut ActorManager,
+        particle_manager: &mut juice_particles::ParticleManager,
+        user_input: &UserInput,
+        flux_field: Vector2
+    ) {
         match self.movement_status {
             MovementStatus::IsLanded => {
                 if user_input.jump_just_pressed || self.jump_buffer_timer > 0 {
                     // Add jump force
                     self.velocity.y = -self.jump_force;
                     self.movement_status = MovementStatus::InJump;
+                    self.generate_jump_particles(particle_manager);
 
                     // Set-up jump animation for idle and running animations
                     if self.velocity.x.abs() > 0.1 {
@@ -120,10 +131,13 @@ impl Player {
                 if self.dash_timer == DASH_TIMER {
                     if user_input.right_pressed {
                         self.dash_force = Vector2::new(DASH_SPEED_X, 0.);
+                        self.dash_direction = DashDirection::Right;
                     } else if user_input.left_pressed {
                         self.dash_force = Vector2::new(-DASH_SPEED_X, 0.);
+                        self.dash_direction = DashDirection::Left;
                     } else if user_input.jump_pressed {
                         self.dash_force = Vector2::new(0., -DASH_SPEED_Y);
+                        self.dash_direction = DashDirection::Up;
                     } else {
                         self.dash_timer = 0;
                         return;
@@ -131,6 +145,7 @@ impl Player {
                 }
                 if self.dash_timer > 0 {
                     self.velocity = self.dash_force;
+                    self.generate_dash_particles(particle_manager, &self.dash_direction);
                     self.dash_timer -= 1;
                     return;
                 } else {
@@ -144,9 +159,11 @@ impl Player {
         if user_input.left_pressed {
             self.velocity += &Vector2::new(-self.acceleration, 0.0);
             self.is_facing_left = true;
+            self.generate_run_particles(particle_manager);
         } else if user_input.right_pressed {
             self.velocity += & Vector2::new(self.acceleration, 0.0);
             self.is_facing_left = false;
+            self.generate_run_particles(particle_manager);
         } else {
             if self.velocity.x > 0. {
                 self.velocity.x = (self.velocity.x - self.deceleration).max(0.);
@@ -191,7 +208,106 @@ impl Player {
                 }
             }
         }
+
+        if self.has_landed {
+            self.generate_land_particles(particle_manager);
+        }
     }
+    
+    fn generate_run_particles(&self, particle_manager: &mut juice_particles::ParticleManager) {
+        if self.velocity.x.abs() > 0.01 && self.movement_status == MovementStatus::IsLanded {
+            let bounding_box = self.actor.get_bound();
+            particle_manager.create_burst(&BurstConfig {
+                source: BurstSource::Rectangle {
+                    min: (bounding_box.left, bounding_box.bottom - 1.),
+                    max: (bounding_box.right, bounding_box.bottom),
+                },
+                x_velocity: (-0.3, 0.3),
+                y_velocity: (-0.1, 0.1),
+                lifetime: (0.2, 2.0),
+                color: 0x777777cc,
+                size: (1, 3),
+                count: (1),
+                shape: Shape::Square,
+                should_fade_out: true,
+            });
+        }
+    }
+    
+    fn generate_jump_particles(&self, particle_manager: &mut juice_particles::ParticleManager) {
+        let bounding_box = self.actor.get_bound();
+        particle_manager.create_burst( &BurstConfig {
+            source: BurstSource::Rectangle {
+                min: (bounding_box.left, bounding_box.bottom - 2.),
+                max: (bounding_box.right, bounding_box.bottom),
+            },
+            x_velocity: (-0.5, 0.5),
+            y_velocity: (-0.7, -0.1),
+            lifetime: (0.2, 0.8),
+            color: 0x777777cc,
+            size: (1, 5),
+            count: (13),
+            shape: Shape::Circle,
+            should_fade_out: true,
+        });
+    }
+    
+    fn generate_land_particles(&self, particle_manager: &mut juice_particles::ParticleManager) {
+        let bounding_box = self.actor.get_bound();
+        particle_manager.create_burst( &BurstConfig {
+            source: BurstSource::Rectangle {
+                min: (bounding_box.left, bounding_box.bottom - 2.),
+                max: (bounding_box.right, bounding_box.bottom),
+            },
+            x_velocity: (-1.0, 1.0),
+            y_velocity: (-0.1, 0.1),
+            lifetime: (0.2, 0.5),
+            color: 0x777777cc,
+            size: (1, 5),
+            count: (13),
+            shape: Shape::Circle,
+            should_fade_out: true,
+        });
+    }
+
+    fn generate_dash_particles(&self, particle_manager: &mut juice_particles::ParticleManager, dash_direction: &DashDirection) {
+        let bounding_box = self.actor.get_bound();
+        let dash_particle_fast_speed = 1.0;
+        let dash_particle_slow_speed = 0.1;
+        let x_velocity;
+        let y_velocity;
+        
+        match dash_direction {
+            DashDirection::Right => {
+                x_velocity = (dash_particle_slow_speed, dash_particle_fast_speed);
+                y_velocity = (-dash_particle_slow_speed, dash_particle_slow_speed);
+            },
+            DashDirection::Left => {
+                x_velocity = (-dash_particle_fast_speed, -dash_particle_slow_speed);
+                y_velocity = (-dash_particle_slow_speed, dash_particle_slow_speed);
+            },
+            DashDirection::Up => {
+                x_velocity = (-dash_particle_slow_speed, dash_particle_slow_speed);
+                y_velocity = (dash_particle_slow_speed, dash_particle_fast_speed);
+            }
+        }
+
+        particle_manager.create_burst( &BurstConfig {
+            source: BurstSource::Rectangle {
+                min: (bounding_box.left, bounding_box.top),
+                max: (bounding_box.right, bounding_box.bottom),
+            },
+            x_velocity,
+            y_velocity,
+            lifetime: (0.2, 0.8),
+            color: 0x4be5fecc,
+            size: (2, 5),
+            count: (7),
+            shape: Shape::Circle,
+            should_fade_out: true,
+        });
+    }
+    
     
     pub fn pick_item(&mut self, actor_manager: &mut ActorManager) {
         if self.try_pick_item {
@@ -248,8 +364,13 @@ impl Player {
                             anim.set_repeat(1);
                         }
                         self.movement_status = MovementStatus::IsLanded;
+                        self.has_landed = true;
+                    } else {
+                        self.has_landed = false;
                     }
 
+                } else {
+                    self.has_landed = false;
                 }
                 self.velocity.y = 0.;
             } else {
@@ -257,6 +378,7 @@ impl Player {
                     self.coyote_timer = self.coyote_timer_duration;
                     self.movement_status = MovementStatus::IsFalling;
                 }
+                self.has_landed = false;
             }
 
         };
@@ -377,6 +499,13 @@ enum MovementStatus {
     IsFalling,
     InJump,
     InDash,
+}
+
+#[turbo::serialize]
+enum DashDirection {
+    Right,
+    Left,
+    Up,
 }
 
 impl std::fmt::Display for MovementStatus {
