@@ -94,7 +94,7 @@ pub fn handle_input(options: &mut Vec<MenuOption>) -> Option<String> {
         cycle_option(options, CycleDirection::Down);
     }
 
-    if gp.select.just_pressed() {
+    if gp.b.just_pressed() {
         let selected_option = options.iter().position(|x| x.is_selected);
         match selected_option {
             Some(idx) => {
