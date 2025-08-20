@@ -403,7 +403,7 @@ impl GameState {
         //show_total_flux(total_flux, &Vector2::new(screen_center.0 as f32, screen_center.1 as f32));
         //show_debug_info(self.last_fpsu, &screen_center);
         
-        draw_hud(screen_center.0 as f32, screen_center.1 as f32, total_flux);
+        draw_hud(total_flux);
         let net_flux_field = net_flux_field_at_point(&self.local_player.get_position(), &self.level_manager.loaded_level.tilemap.flux_cores).length();
         draw_shader_distortion_parameter_pixel(net_flux_field);
         if net_flux_field > 30. {
