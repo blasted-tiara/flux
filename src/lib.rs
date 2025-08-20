@@ -50,8 +50,8 @@ use level_manager::*;
 mod background;
 use background::*;
 
-mod mainmenu;
-use mainmenu::*;
+mod main_menu;
+use main_menu::*;
 
 mod hud;
 use hud::*;
