@@ -50,7 +50,8 @@ impl LevelManager {
         match level_name {
             LevelName::Level1 => Some(LevelName::Level2),
             LevelName::Level2 => Some(LevelName::Level3),
-            LevelName::Level3 => None,
+            LevelName::Level3 => Some(LevelName::Level4),
+            LevelName::Level4 => None,
         }        
     }
 
@@ -59,6 +60,7 @@ impl LevelManager {
             LevelName::Level1 => construct_level_1(),
             LevelName::Level2 => construct_level_2(),
             LevelName::Level3 => construct_level_3(),
+            LevelName::Level4 => construct_level_4(),
         }
     }
 }
@@ -68,4 +70,5 @@ pub enum LevelName {
     Level1,
     Level2,
     Level3,
+    Level4,
 }
