@@ -50,7 +50,7 @@ impl Player {
             is_facing_left: true,
             acceleration: 0.5,
             deceleration: 0.5,
-            jump_force: 12.0,
+            jump_force: 13.0,
             coyote_timer_duration: 3,
             jump_buffer_timer_duration: 8,
             movement_status: MovementStatus::IsFalling,
