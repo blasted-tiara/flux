@@ -313,6 +313,8 @@ impl GameState {
             up_pressed: gamepad.up.pressed(),
             down_pressed: gamepad.down.pressed(),
             a_just_pressed: gamepad.a.just_pressed(),
+            x_just_pressed: gamepad.x.just_pressed(),
+            y_just_pressed: gamepad.y.just_pressed(),
         };
         
         if matches!(self.game_flow_state, GameFlowState::InGameCoOp) {
@@ -576,6 +578,8 @@ pub struct UserInput {
     up_pressed: bool,
     down_pressed: bool,
     a_just_pressed: bool,
+    x_just_pressed: bool,
+    y_just_pressed: bool,
 }
 
 impl UserInput {
@@ -589,6 +593,8 @@ impl UserInput {
             up_pressed: false,
             down_pressed: false,
             a_just_pressed: false,
+            x_just_pressed: false,
+            y_just_pressed: false,
         }
     }
 }

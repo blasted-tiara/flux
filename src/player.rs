@@ -26,6 +26,7 @@ pub struct Player {
     try_pick_item: bool,
     picked_item: Option<ActorId>,
     used_dash: bool,
+    used_double_jump: bool,
     dash_timer: u32,
     dash_force: Vector2,
     dash_direction: DashDirection,
@@ -57,9 +58,10 @@ impl Player {
             try_pick_item: false,
             picked_item: Option::None,
             used_dash: false,
+            used_double_jump: false,
             dash_timer: 0,
             dash_force: Vector2::zero(),
-            dash_direction: DashDirection::Up,
+            dash_direction: DashDirection::Right,
         }
     }
    
@@ -95,11 +97,15 @@ impl Player {
                 }
             },
             MovementStatus::InJump => {
-                if !self.used_dash && user_input.jump_just_pressed {
+                if user_input.y_just_pressed  && !self.used_dash { 
                     if flux_field.length() > DASH_FLUX_THRESHOLD {
                         self.dash_timer = DASH_TIMER;
                         self.movement_status = MovementStatus::InDash;
                     }
+                }
+                if user_input.jump_just_pressed && !self.used_double_jump {
+                    self.velocity.y = -self.jump_force;
+                    self.used_double_jump = true;
                 }
                 if self.velocity.y > 0. {
                     self.movement_status = MovementStatus::IsFalling;
@@ -113,17 +119,22 @@ impl Player {
                         self.movement_status = MovementStatus::InJump;
                         audio::play("jump-sfx-nothing");
                     } else {
-                        if self.used_dash {
-                            // If dash is already used, buffer jump
+                        if self.used_double_jump {
+                            // If double jump already used, buffer jump
                             self.jump_buffer_timer = self.jump_buffer_timer_duration;
                         } else {
-                            // Otherwise, DASH!
+                            // Otherwise, double jump!
                             
-                            if flux_field.length() > DASH_FLUX_THRESHOLD {
-                                self.dash_timer = DASH_TIMER;
-                                self.movement_status = MovementStatus::InDash;
-                            }
+                            self.velocity.y = -self.jump_force;
+                            self.movement_status = MovementStatus::InJump;
+                            self.used_double_jump = true;
                         }
+                    }
+                }
+                if user_input.y_just_pressed {
+                    if flux_field.length() > DASH_FLUX_THRESHOLD {
+                        self.dash_timer = DASH_TIMER;
+                        self.movement_status = MovementStatus::InDash;
                     }
                 }
             }
@@ -135,9 +146,6 @@ impl Player {
                     } else if user_input.left_pressed {
                         self.dash_force = Vector2::new(-DASH_SPEED_X, 0.);
                         self.dash_direction = DashDirection::Left;
-                    } else if user_input.jump_pressed {
-                        self.dash_force = Vector2::new(0., -DASH_SPEED_Y);
-                        self.dash_direction = DashDirection::Up;
                     } else {
                         self.dash_timer = 0;
                         return;
@@ -286,10 +294,6 @@ impl Player {
                 x_velocity = (-dash_particle_fast_speed, -dash_particle_slow_speed);
                 y_velocity = (-dash_particle_slow_speed, dash_particle_slow_speed);
             },
-            DashDirection::Up => {
-                x_velocity = (-dash_particle_slow_speed, dash_particle_slow_speed);
-                y_velocity = (dash_particle_slow_speed, dash_particle_fast_speed);
-            }
         }
 
         particle_manager.create_burst( &BurstConfig {
@@ -353,6 +357,7 @@ impl Player {
             if collision_happened {
                 if self.velocity.y >= 0.0 {
                     self.used_dash = false;
+                    self.used_double_jump = false;
                     if self.movement_status == MovementStatus::IsFalling {
                         if self.velocity.x.abs() > 0.1 {
                             let anim = animation::get("player_character_walk");
@@ -507,7 +512,6 @@ enum MovementStatus {
 enum DashDirection {
     Right,
     Left,
-    Up,
 }
 
 impl std::fmt::Display for MovementStatus {
