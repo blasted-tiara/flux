@@ -7,7 +7,7 @@ pub fn construct_level_2() -> Level {
     let height = 18;
     let width = 40;
     let tile_size = 16;
-    let required_flux = 4. * FLUX_PER_UNIT;
+    let required_flux = 3. * FLUX_PER_UNIT;
 
     let terrain_tilemap: [u8; 720] = [
         5, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 5,
@@ -53,7 +53,7 @@ pub fn construct_level_2() -> Level {
     
     let mut flux_cores_properties: HashMap<u8, FluxCoreData> = HashMap::new();
     flux_cores_properties.insert(1, FluxCoreData {
-        amplitude: 4000.,
+        amplitude: 5000.,
         core_type: FluxCoreType::Rotational,
         time_offset: 0.0,
         time_period: 0.0,
