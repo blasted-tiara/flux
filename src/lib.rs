@@ -93,7 +93,6 @@ impl GameState {
     pub fn new() -> Self {
         let level_manager =  LevelManager::new();
         let local_player_position = level_manager.loaded_level.player1_start_position.clone();
-        let required_flux = level_manager.loaded_level.required_flux;
         Self {
             level_manager,
             local_player: Player::new(local_player_position.x, local_player_position.y),
@@ -185,26 +184,58 @@ impl GameState {
             self.game_flow_state = GameFlowState::MainMenu;
         }
 
-        clear(0x00000000);
+        sprite!(
+            "UI_MainMenuScreen",
+            x = 0,
+            y = 0,
+            fixed = true,
+        );
+
+        sprite!(
+            "logo",
+            x = 112,
+            y = 50,
+        );
+
         text!(
-            "Lucas Carbone",
-            x = SCREEN_WIDTH / 2 - 20,
-            y = SCREEN_HEIGHT / 2,
-            color = 0x00ffffff,
+            "Game Developer",
+            x = 120,
+            y = 114,
+            color = 0xffffffff,
             font = "large",
         );
         text!(
             "Enver Podgorcevic",
-            x = SCREEN_WIDTH / 2 - 20,
-            y = SCREEN_HEIGHT / 2 + 30,
-            color = 0x00ffffff,
+            x = 108,
+            y = 126,
+            color = 0xffffffff,
             font = "large",
         );
         text!(
-            "Press any key",
-            x = SCREEN_WIDTH / 2 - 20,
-            y = SCREEN_HEIGHT - 50,
-            color = 0x00ffffff,
+            "Game Artist",
+            x = 131,
+            y = 150,
+            color = 0xffffffff,
+            font = "large",
+        );
+        text!(
+            "Lucas Carbone",
+            x = 122,
+            y = 162,
+            color = 0xffffffff,
+            font = "large",
+        );
+
+        sprite!(
+            "acornr",
+            x = 166,
+            y = 180,
+        );
+        text!(
+            "Press any key...",
+            x = SCREEN_WIDTH / 2 - 143,
+            y = SCREEN_HEIGHT - 84,
+            color = 0xffffffff,
             font = "large",
         );
         draw_menu_distortion_parameter_pixel();
