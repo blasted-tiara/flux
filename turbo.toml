@@ -11,4 +11,4 @@ height = 288
 default-surface-shader = "crt-monitor-shader"
 
 [turbo-os]
-api-url = "https://os.turbo.computer"
+api-url = "https://jensen.turbo.computer"
