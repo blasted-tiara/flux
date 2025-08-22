@@ -129,6 +129,6 @@ impl TileMap {
     }
     
     pub fn is_inside(&self, position: &Vector2) -> bool {
-        position.x > 0. && position.x < self.width && position.y > 0. && position.y < self.height
+        position.x > 0. && position.x < self.width
     }
 }
