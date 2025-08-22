@@ -8,12 +8,14 @@ const MAX_PARTICLE_TAIL_COUNT: u32 = 9;
 #[turbo::serialize]
 pub struct ParticleManager {
     particle_pool: Vec<Particle>,
+    flux_cores: Vec<FluxCore>,
 }
 
 impl ParticleManager {
-    pub fn new() -> Self {
+    pub fn new(flux_cores: Vec<FluxCore>) -> Self {
         Self {
             particle_pool: vec![],
+            flux_cores: flux_cores,
         }
     }
     
@@ -36,7 +38,7 @@ impl ParticleManager {
     pub fn draw(&self) {
         for particle in &self.particle_pool {
             if particle.is_alive {
-                particle.draw();
+                particle.draw(&self.flux_cores);
             } else {
                 // This is fine because all the active particles will be on the left side
                 break;
@@ -123,16 +125,23 @@ impl Particle {
         position + Vector2::random() * self.jitter
     }
     
-    fn draw(&self) {
+    fn draw(&self, flux_cores: &Vec<FluxCore>) {
         // NOTE: This can be optimized to only generate the new color when creating the point
         let mut i = 1;
         let mut alpha = 0.6;
         for position in &self.positions {
+            let flux_strength = net_flux_field_at_point(&position, flux_cores);
+            let color;
+            if flux_strength.length() >= DEATH_THRESHOLD {
+                color = random_dangerous_color(alpha);
+            } else {
+                color = self.color;
+            }
             circ!{
                 d = lerp(0., self.diameter as f32, i as f32 / MAX_PARTICLE_TAIL_COUNT as f32).ceil(),
                 x = position.x,
                 y = position.y,
-                color = change_alpha(self.color, alpha),
+                color = change_alpha(color, alpha),
             }
             i += 1;
             alpha += 0.1;
@@ -146,6 +155,14 @@ pub fn random_color(alpha: f32) -> u32 {
     let b = random::between(0.7, 1.0);
     color_rgb(r, g, b, alpha)
 }
+
+pub fn random_dangerous_color(alpha: f32) -> u32 {
+    let r = random::between(0.7, 1.0);
+    let g = random::between(0.2, 0.4) + if (time::tick() % 500) > 250 { 0.0 } else { 0.4 };
+    let b = random::between(0.2, 0.4) + if (time::tick() % 500) > 250 { 0.0 } else { 0.4 };
+    color_rgb(r, g, b, alpha)
+}
+
 
 pub fn color_rgb(red: f32, green: f32, blue: f32, alpha: f32) -> u32 {
     ((red.clamp(0., 1.) * 255.) as u32) << 24 |

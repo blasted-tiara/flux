@@ -70,6 +70,7 @@ const SCREEN_WIDTH: i32 = 512;
 const SCREEN_HEIGHT: i32 = 288;
 const DEGAUSS_FRAMES: u32 = 120;
 const FLUX_PER_UNIT: f32 = 200.;
+const DEATH_THRESHOLD: f32 = 30.;
 
 #[turbo::game]
 struct GameState {
@@ -94,6 +95,7 @@ impl GameState {
         let level_manager =  LevelManager::new();
         let local_player_position = level_manager.loaded_level.player1_start_position.clone();
         Self {
+            particle_manager: ParticleManager::new(level_manager.loaded_level.tilemap.flux_cores.clone()),
             level_manager,
             local_player: Player::new(local_player_position.x, local_player_position.y),
             server_player_position: Vector2::zero(),
@@ -105,7 +107,6 @@ impl GameState {
             last_processed_tick: 0,
             main_menu_options: get_main_menu_options(),
             game_flow_state: GameFlowState::MainMenu,
-            particle_manager: ParticleManager::new(),
             degauss_shader_counter: 0,
             hud: Hud::new(),
         }
@@ -482,7 +483,7 @@ impl GameState {
         self.hud.draw();
         let net_flux_field = net_flux_field_at_point(&self.local_player.get_position(), &self.level_manager.loaded_level.tilemap.flux_cores).length();
         draw_shader_distortion_parameter_pixel(net_flux_field);
-        if net_flux_field > 30. {
+        if net_flux_field > DEATH_THRESHOLD {
             self.restart_level();
             self.degauss_shader_counter = DEGAUSS_FRAMES;
         }
@@ -526,7 +527,7 @@ impl GameState {
         self.server_player_position = Vector2::zero();
         self.unprocessed_local_inputs = VecDeque::new();
         self.remote_player_snapshots = VecDeque::new();
-        self.particle_manager = ParticleManager::new();
+        self.particle_manager = ParticleManager::new(self.level_manager.loaded_level.tilemap.flux_cores.clone());
     }
 
     // This is needed for the degauss shader
