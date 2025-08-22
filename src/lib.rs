@@ -165,14 +165,45 @@ impl GameState {
             }
             let _ = conn.send(&ClientMsg::Ready );
         }
-        clear(0x00000000);
+        sprite!(
+            "UI_MainMenuScreen",
+            x = 0,
+            y = 0,
+            fixed = true,
+        );
+
+        sprite!(
+            "logo",
+            x = 112,
+            y = 50,
+        );
+
         text!(
-            "Waiting for player 2...",
-            x = SCREEN_WIDTH / 2 - 50,
-            y = SCREEN_HEIGHT / 2,
-            color = 0x00ffffff,
+            "Waiting for",
+            x = 130,
+            y = 125,
+            color = 0xffffffff,
             font = "large",
         );
+        let mut player_2_string = "Player 2".to_string();
+        let time_tick = time::tick() % (4 * 60);
+        if time_tick > 60 {
+            player_2_string.push('.');
+        }
+        if time_tick > 2 * 60 {
+            player_2_string.push('.');
+        }
+        if time_tick > 3 * 60 {
+            player_2_string.push('.');
+        }
+        text!(
+            &player_2_string,
+            x = 140,
+            y = 140,
+            color = 0xffffffff,
+            font = "large",
+        );
+
         draw_menu_distortion_parameter_pixel();
     }
     
