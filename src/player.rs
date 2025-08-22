@@ -325,11 +325,13 @@ impl Player {
                         if (item_bounding_box.right - player_bounding_box.left).abs() < horizontal_distance_tolerance {
                             self.picked_item = Option::Some(*actor_id);
                             actor.is_child = true;
+                            break;
                         }
                     } else {
                         if (item_bounding_box.left - player_bounding_box.right).abs() < horizontal_distance_tolerance {
                             self.picked_item = Option::Some(*actor_id);
                             actor.is_child = true;
+                            break;
                         }
                     }
                 }
