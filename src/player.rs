@@ -312,7 +312,7 @@ impl Player {
     pub fn pick_item(&mut self, actor_manager: &mut ActorManager) {
         if self.try_pick_item {
             let vertical_distance_tolerance = 20.0;
-            let horizontal_distance_tolerance = 10.0;
+            let horizontal_distance_tolerance = 20.0;
             let player_bounding_box = self.actor.get_bound();
             for (actor_id, actor) in &mut actor_manager.actors {
                 if actor.is_child == true {
@@ -322,13 +322,13 @@ impl Player {
                 if (player_bounding_box.bottom - item_bounding_box.bottom).abs() < vertical_distance_tolerance {
                     if self.is_facing_left {
                         // check if there's an item close by to the left
-                        if (item_bounding_box.right - player_bounding_box.left).abs() < horizontal_distance_tolerance {
+                        if ((item_bounding_box.right + item_bounding_box.left ) / 2. - player_bounding_box.left).abs() < horizontal_distance_tolerance {
                             self.picked_item = Option::Some(*actor_id);
                             actor.is_child = true;
                             break;
                         }
                     } else {
-                        if (item_bounding_box.left - player_bounding_box.right).abs() < horizontal_distance_tolerance {
+                        if ((item_bounding_box.right + item_bounding_box.left) / 2. - player_bounding_box.right).abs() < horizontal_distance_tolerance {
                             self.picked_item = Option::Some(*actor_id);
                             actor.is_child = true;
                             break;
