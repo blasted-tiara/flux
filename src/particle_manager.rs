@@ -158,8 +158,8 @@ pub fn random_color(alpha: f32) -> u32 {
 
 pub fn random_dangerous_color(alpha: f32) -> u32 {
     let r = random::between(0.7, 1.0);
-    let g = random::between(0.2, 0.4) + if (time::tick() % 500) > 250 { 0.0 } else { 0.4 };
-    let b = random::between(0.2, 0.4) + if (time::tick() % 500) > 250 { 0.0 } else { 0.4 };
+    let g = random::between(0.2, 0.4);
+    let b = random::between(0.2, 0.4);
     color_rgb(r, g, b, alpha)
 }
 
