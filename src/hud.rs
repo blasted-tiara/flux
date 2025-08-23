@@ -7,9 +7,9 @@ const SHAKE_INTENSITY: i32 = 2;
 pub struct Hud {
     total_flux: f32,
     required_flux: f32,
-    shake_count: u32,
-    shake_x_offset: i32,
-    shake_y_offset: i32,
+    shake_counter_tick: u32,
+    shake_counter_x_offset: i32,
+    shake_counter_y_offset: i32,
 }
 
 impl Hud {
@@ -17,26 +17,26 @@ impl Hud {
         Hud {
             required_flux: 0.,
             total_flux: 0.,
-            shake_count: 0,
-            shake_x_offset: 0,
-            shake_y_offset: 0,
+            shake_counter_tick: 0,
+            shake_counter_x_offset: 0,
+            shake_counter_y_offset: 0,
         }
     }
     
     pub fn update(&mut self, total_flux: f32, required_flux: f32) {
         if (self.total_flux / FLUX_PER_UNIT) as i32 != (total_flux / FLUX_PER_UNIT) as i32 {
-            self.shake_count = SHAKE_COUNT;
+            self.shake_counter_tick = SHAKE_COUNT;
         } 
         self.total_flux = total_flux;
         self.required_flux = required_flux;
 
-        if self.shake_count > 0 {
-            self.shake_x_offset = random::i32() % SHAKE_INTENSITY;
-            self.shake_y_offset = random::i32() % SHAKE_INTENSITY;
-            self.shake_count -= 1;
+        if self.shake_counter_tick > 0 {
+            self.shake_counter_x_offset = random::i32() % SHAKE_INTENSITY;
+            self.shake_counter_y_offset = random::i32() % SHAKE_INTENSITY;
+            self.shake_counter_tick -= 1;
         } else {
-            self.shake_x_offset = 0;
-            self.shake_y_offset = 0;
+            self.shake_counter_x_offset = 0;
+            self.shake_counter_y_offset = 0;
         }
     }
     
@@ -48,16 +48,21 @@ impl Hud {
             fixed = true,
         );
 
-        let mut flux_residue = self.total_flux % FLUX_PER_UNIT;
-        if flux_residue <= 0. {
-            flux_residue = FLUX_PER_UNIT - flux_residue.abs();
+        let width = (self.total_flux / self.required_flux).min(1.);
+        let bar_x_offset;
+        let bar_y_offset;
+        if width >= 1. {
+            bar_x_offset = random::i32() % SHAKE_INTENSITY;
+            bar_y_offset = random::i32() % SHAKE_INTENSITY;
+        } else {
+            bar_x_offset = 0;
+            bar_y_offset = 0;
         }
-
         rect!(
-            w = (231. * flux_residue / FLUX_PER_UNIT) as u32,
+            w = (231. * width ) as u32,
             h = 5,
-            x = 144,
-            y = 15,
+            x = 144 + bar_x_offset, 
+            y = 15 + bar_y_offset,
             color = 0x0090ffff,
             border_radius = 2,
             fixed = true,
@@ -68,8 +73,8 @@ impl Hud {
 
         text!(
             &units_of_flux,
-            x = 31 - (units_of_flux.len() as i32) * 6 + self.shake_x_offset,
-            y = 19 + self.shake_y_offset,
+            x = 31 - (units_of_flux.len() as i32) * 6 + self.shake_counter_x_offset,
+            y = 19 + self.shake_counter_y_offset,
             color = 0xdddddddd,
             font = "VCRFont",
             fixed = true,
